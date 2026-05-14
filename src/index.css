@@ -1,0 +1,70 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-ink: #0d0d0d;
+  --color-paper: #f5f0e8;
+  --color-cream: #ede8dc;
+  --color-warm: #d4c9b0;
+  --color-saffron-50: #FFF7ED;
+  --color-saffron-100: #FFEDD5;
+  --color-saffron-400: #FB923C;
+  --color-saffron-500: #FF9933;
+  --color-saffron-600: #F37C02;
+  --color-saffron-700: #C2410C;
+  --color-morning: #f59e0b;
+  --color-afternoon: #3b82f6;
+  --color-evening: #7c3aed;
+  --color-success: #16a34a;
+  --color-gold: #d4a017;
+  --color-silver: #8a8a8a;
+  --color-bronze: #b87333;
+  --font-syne: 'Inter', sans-serif;
+  --font-dm: 'DM Sans', sans-serif;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-dm);
+    background: var(--color-paper);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    margin: 0;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-syne);
+  }
+}
+
+/* Conic-gradient ring components */
+.ring {
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring-core {
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring-sm { width: 64px; height: 64px; }
+.ring-sm .ring-core { width: 48px; height: 48px; }
+.ring-sm .ring-inner { font-family: var(--font-syne); font-size: 0.85rem; font-weight: 800; }
+.ring-sm { border-width: 3px; border-style: solid; }
+
+.ring-lg { width: 80px; height: 80px; }
+.ring-lg .ring-core { width: 60px; height: 60px; }
+.ring-lg .ring-inner { font-family: var(--font-syne); font-size: 1.1rem; font-weight: 800; }
+.ring-lg { border-width: 4px; border-style: solid; }
+
+/* Ring color variants */
+.ring.morning { border-color: var(--color-morning); background: conic-gradient(var(--color-morning) 0% var(--pct, 0%), #f5f5f5 var(--pct, 0%) 100%); }
+.ring.afternoon { border-color: var(--color-afternoon); background: conic-gradient(var(--color-afternoon) 0% var(--pct, 0%), #f5f5f5 var(--pct, 0%) 100%); }
+.ring.evening { border-color: var(--color-evening); background: conic-gradient(var(--color-evening) 0% var(--pct, 0%), #f5f5f5 var(--pct, 0%) 100%); }

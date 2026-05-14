@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env.local
+.capacitor/
+.cache/
+android/app/build/
+android/.gradle/
+android/build/
+android/captures/
+.android/
+*.apk
+*.aab
+*.jks
+*.keystore
