@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import { supabase } from '../supabase'
+import { isNative } from '../utils/notifications'
 
 const AuthContext = createContext(null)
 
@@ -86,9 +87,12 @@ export function AuthProvider({ children }) {
   }
 
   const signInWithGoogle = async () => {
+    const redirectTo = isNative()
+      ? 'com.asthikasamaj.sandhyavandhanam://auth'
+      : `${window.location.origin}`
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}` },
+      options: { redirectTo },
     })
     if (error) throw error
   }
