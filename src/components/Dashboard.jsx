@@ -125,9 +125,9 @@ export default function Dashboard() {
           <div className="text-lg md:text-xl font-bold font-syne mb-3 flex items-center gap-2 after:content-[''] after:flex-1 after:h-px after:bg-warm">Recent History</div>
           <div className="flex flex-col gap-2">
             {history.slice(0, 7).map((record) => (
-              <div key={record.id || record.date} className="bg-white rounded-[10px] md:rounded-[10px] px-4 py-3 md:py-3.5 shadow-sm grid grid-cols-1 md:grid-cols-[140px_repeat(3,1fr)] items-center gap-2 md:gap-4">
+              <div key={record.id || record.date} className={`rounded-[10px] md:rounded-[10px] px-4 py-3 md:py-3.5 shadow-sm grid grid-cols-1 md:grid-cols-[140px_repeat(3,1fr)] items-center gap-2 md:gap-4 ${record.date === selectedDate ? 'bg-saffron-100/50' : 'bg-white'}`}>
                 <div>
-                  <div className="font-syne font-bold text-sm text-ink">{new Date(record.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{record.date === selectedDate && <span className="text-saffron-600 text-xs font-semibold ml-1">Today</span>}</div>
+                  <div className="font-syne font-bold text-sm text-ink">{new Date(record.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
                 </div>
                 {SLOTS.map((slot) => {
                   const s = record[slot.key] || {}

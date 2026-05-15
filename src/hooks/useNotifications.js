@@ -85,53 +85,25 @@ export function useNotifications(user) {
 
       if (isNative()) {
         await scheduleAllReminders()
-      } else {
-        if (!isPushSupported()) {
-          setError('Push notifications require HTTPS. They will work on the deployed site (Netlify).')
-          return
-        }
-
-        if (!VAPID_PUBLIC_KEY) {
-          setError('Push notifications are not configured. Please set VITE_VAPID_PUBLIC_KEY.')
-          return
-        }
-
-        let registration
+      } else if (isPushSupported() && VAPID_PUBLIC_KEY) {
         try {
-          registration = await swReady()
-        } catch (err) {
-          setError(err.message || 'Service worker not available.')
-          return
-        }
-
-        let subscription = await registration.pushManager.getSubscription()
-
-        if (!subscription) {
-          try {
+          const registration = await swReady(10000)
+          let subscription = await registration.pushManager.getSubscription()
+          if (!subscription) {
             subscription = await registration.pushManager.subscribe({
               userVisibleOnly: true,
               applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
             })
-          } catch (subErr) {
-            if (subErr.name === 'NotAllowedError') {
-              setError('Notification permission was denied by the browser.')
-            } else {
-              setError('Failed to set up push notifications: ' + (subErr.message || 'Unknown error'))
-            }
-            return
           }
-        }
-
-        const sub = subscription.toJSON()
-        const { error: subError } = await supabase.from('push_subscriptions').upsert({
-          user_id: user.id,
-          endpoint: sub.endpoint,
-          p256dh: sub.keys.p256dh,
-          auth_key: sub.keys.auth,
-        }, { onConflict: 'endpoint' })
-        if (subError) {
-          setError('Failed to save notification subscription: ' + subError.message)
-          return
+          const sub = subscription.toJSON()
+          await supabase.from('push_subscriptions').upsert({
+            user_id: user.id,
+            endpoint: sub.endpoint,
+            p256dh: sub.keys.p256dh,
+            auth_key: sub.keys.auth,
+          }, { onConflict: 'endpoint' })
+        } catch (_) {
+          // push setup is best-effort on web, preference still gets saved
         }
       }
 
