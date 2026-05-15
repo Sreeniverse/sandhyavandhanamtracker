@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
-import { isNative, scheduleAllReminders, cancelAllReminders } from '../utils/notifications'
+import { isNative, checkPermission, requestPermission, scheduleAllReminders, cancelAllReminders } from '../utils/notifications'
 import { friendlyError } from '../utils/errors'
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
@@ -46,6 +46,19 @@ async function setupWebPush(userId) {
   }
 }
 
+async function deleteWebPushSubscription(userId) {
+  try {
+    const registration = await navigator.serviceWorker.ready
+    const subscription = await registration.pushManager.getSubscription()
+    if (subscription) {
+      await subscription.unsubscribe()
+      await supabase.from('push_subscriptions').delete().eq('user_id', userId)
+    }
+  } catch (err) {
+    console.error('Failed to delete web push subscription:', err)
+  }
+}
+
 async function savePref(userId, val) {
   const { error } = await supabase
     .from('notification_preferences')
@@ -75,13 +88,29 @@ export function useNotifications(user) {
       })
   }, [user])
 
+  // Reschedule local notifications on mount if enabled on native
+  // Handles cases where Android cleared scheduled notifications (reboot, app update)
+  useEffect(() => {
+    if (!native || !enabled) return
+    scheduleAllReminders().catch(err => console.error('Reschedule failed:', err))
+  }, [native, enabled])
+
   const toggle = useCallback(async () => {
     setError('')
     const next = !enabled
 
     if (next) {
-      // Enabling
-      if (!native) {
+      // Enabling notifications
+      if (native) {
+        const hasPermission = await checkPermission()
+        if (!hasPermission) {
+          const granted = await requestPermission()
+          if (!granted) {
+            setError('Notification permission was denied.')
+            return
+          }
+        }
+      } else {
         const perm = Notification.permission
         if (perm === 'denied') {
           setError('Notifications are blocked. Enable them in your browser settings.')
@@ -96,9 +125,11 @@ export function useNotifications(user) {
         }
       }
     } else {
-      // Disabling
+      // Disabling notifications
       if (native) {
         cancelAllReminders()
+      } else {
+        await deleteWebPushSubscription(user.id)
       }
     }
 

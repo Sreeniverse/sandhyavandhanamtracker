@@ -224,7 +224,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between px-4 md:px-6 py-3">
             <div>
               <div className="text-sm">Daily Reminders</div>
-              <div className="text-xs text-gray-400">Prathakala by 11 AM, Madhyanika by 3 PM, Saayamkala by 8 PM</div>
+              <div className="text-xs text-gray-400">Prathakala by 9:30 AM, Madhyanika by 1:30 PM, Saayamkala by 6:30 PM</div>
             </div>
             {notifSupported ? (
               !notifLoading ? (

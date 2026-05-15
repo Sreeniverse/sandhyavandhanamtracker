@@ -134,6 +134,10 @@ Deno.serve(async (req: Request) => {
 
             if (response.status >= 200 && response.status < 300) {
               sent++;
+            } else if (response.status === 410 || response.status === 404) {
+              // Subscription expired or gone - remove it
+              await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+              failed++;
             } else {
               failed++;
             }

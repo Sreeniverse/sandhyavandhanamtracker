@@ -7,13 +7,23 @@ const SLOT_CONFIG = {
 }
 
 const SLOT_TIMES = {
-  morning: { hour: 11, minute: 0 },
-  afternoon: { hour: 15, minute: 0 },
-  evening: { hour: 20, minute: 0 },
+  morning: { hour: 9, minute: 30 },
+  afternoon: { hour: 13, minute: 30 },
+  evening: { hour: 18, minute: 30 },
 }
 
 export function isNative() {
   return Capacitor.isNativePlatform()
+}
+
+async function ensureChannel() {
+  const { LocalNotifications } = await import('@capacitor/local-notifications')
+  await LocalNotifications.createChannel({
+    id: 'reminders',
+    name: 'Practice Reminders',
+    importance: 5,
+    visibility: 1,
+  })
 }
 
 export async function checkPermission() {
@@ -39,6 +49,8 @@ export async function scheduleAllReminders() {
   if (!isNative()) return
   const { LocalNotifications } = await import('@capacitor/local-notifications')
 
+  await ensureChannel()
+
   const notifications = Object.entries(SLOT_CONFIG).map(([slot, config]) => {
     const time = SLOT_TIMES[slot]
     const now = new Date()
@@ -51,6 +63,7 @@ export async function scheduleAllReminders() {
       title: config.title,
       body: config.body,
       schedule: { every: 'day', at },
+      extra: { slot },
     }
   })
 
