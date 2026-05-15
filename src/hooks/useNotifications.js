@@ -19,6 +19,23 @@ function isPushSupported() {
   return window.isSecureContext && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
 }
 
+function swReady(timeoutMs = 5000) {
+  return new Promise((resolve, reject) => {
+    if (!navigator.serviceWorker.controller) {
+      const timer = setTimeout(() => reject(new Error('Service worker not ready. Try refreshing the page.')), timeoutMs)
+      navigator.serviceWorker.ready.then((reg) => {
+        clearTimeout(timer)
+        resolve(reg)
+      }).catch((err) => {
+        clearTimeout(timer)
+        reject(err)
+      })
+    } else {
+      navigator.serviceWorker.ready.then(resolve).catch(reject)
+    }
+  })
+}
+
 export function useNotifications(user) {
   const [enabled, setEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -44,26 +61,24 @@ export function useNotifications(user) {
     setError('')
 
     if (enabled) {
-      // Disable
       await cancelAllReminders()
       const { error: dbError } = await supabase
         .from('notification_preferences')
         .upsert({ user_id: user.id, enabled: false }, { onConflict: 'user_id' })
       if (dbError) {
-        setError(dbError.message)
+        setError('Failed to save preference: ' + dbError.message)
         return
       }
       setEnabled(false)
       return
     }
 
-    // Enable
     try {
       const alreadyGranted = await checkPermission()
       if (!alreadyGranted) {
         const granted = await requestPermission()
         if (!granted) {
-          setError('Notification permission denied')
+          setError('Notification permission was denied. Enable it in your browser or device settings.')
           return
         }
       }
@@ -72,18 +87,39 @@ export function useNotifications(user) {
         await scheduleAllReminders()
       } else {
         if (!isPushSupported()) {
-          setError('Push notifications need HTTPS. Will work on Netlify.')
+          setError('Push notifications require HTTPS. They will work on the deployed site (Netlify).')
           return
         }
 
-        const registration = await navigator.serviceWorker.ready
+        if (!VAPID_PUBLIC_KEY) {
+          setError('Push notifications are not configured. Please set VITE_VAPID_PUBLIC_KEY.')
+          return
+        }
+
+        let registration
+        try {
+          registration = await swReady()
+        } catch (err) {
+          setError(err.message || 'Service worker not available.')
+          return
+        }
+
         let subscription = await registration.pushManager.getSubscription()
 
         if (!subscription) {
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-          })
+          try {
+            subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+            })
+          } catch (subErr) {
+            if (subErr.name === 'NotAllowedError') {
+              setError('Notification permission was denied by the browser.')
+            } else {
+              setError('Failed to set up push notifications: ' + (subErr.message || 'Unknown error'))
+            }
+            return
+          }
         }
 
         const sub = subscription.toJSON()
@@ -94,7 +130,7 @@ export function useNotifications(user) {
           auth_key: sub.keys.auth,
         }, { onConflict: 'endpoint' })
         if (subError) {
-          setError(subError.message)
+          setError('Failed to save notification subscription: ' + subError.message)
           return
         }
       }
@@ -103,7 +139,7 @@ export function useNotifications(user) {
         .from('notification_preferences')
         .upsert({ user_id: user.id, enabled: true }, { onConflict: 'user_id' })
       if (prefError) {
-        setError(prefError.message)
+        setError('Failed to save preference: ' + prefError.message)
         return
       }
 

@@ -164,7 +164,11 @@ export default function ProfilePage() {
               !notifLoading ? (
                 <button
                   onClick={toggleNotif}
-                  className={`w-11 h-[26px] rounded-full relative cursor-pointer transition-colors after:content-[''] after:absolute after:top-[3px] after:w-5 after:h-5 after:rounded-full after:bg-white after:shadow-sm after:transition-transform ${notifEnabled ? 'bg-saffron-600 after:left-[22px]' : 'bg-warm after:left-[3px]'}`}
+                  role="switch"
+                  aria-checked={notifEnabled}
+                  aria-label="Toggle daily reminders"
+                  className={`w-11 h-[26px] rounded-full relative cursor-pointer transition-colors border-0 p-0 after:content-[''] after:absolute after:top-[3px] after:w-5 after:h-5 after:rounded-full after:bg-white after:shadow-sm after:transition-transform ${notifEnabled ? 'bg-saffron-600 after:translate-x-[18px]' : 'bg-warm after:translate-x-0'}`}
+                  style={{ WebkitAppearance: 'none', appearance: 'none' }}
                 />
               ) : (
                 <div className="w-5 h-5 border-2 border-warm border-t-saffron-600 rounded-full animate-spin" />

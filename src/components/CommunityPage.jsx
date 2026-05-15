@@ -15,6 +15,7 @@ export default function CommunityPage() {
   const [yourRank, setYourRank] = useState(null)
   const [yourStreak, setYourStreak] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     async function loadData() {
@@ -39,7 +40,7 @@ export default function CommunityPage() {
           }
         }
       } catch (_) {
-        // community features silently degrade
+        setError('Community features are temporarily unavailable. Please try again later.')
       } finally {
         setLoading(false)
       }
@@ -53,6 +54,9 @@ export default function CommunityPage() {
 
   return (
     <div className="max-w-[900px] mx-auto px-4 md:px-6 py-6 md:py-10">
+      {error && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-[10px] text-sm mb-4">{error}</div>
+      )}
       <div className="mb-5 md:mb-8">
         <div className="text-[0.65rem] md:text-[0.7rem] text-gray-400 uppercase tracking-widest font-syne">Community</div>
         <div className="text-xl md:text-[2rem] font-extrabold tracking-tight font-syne mt-0.5">Leaderboard</div>

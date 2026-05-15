@@ -98,9 +98,6 @@ export default function AuthPage() {
       <div className="md:hidden bg-gradient-to-b from-ink to-[#1a1a1a] py-10 px-6 text-center relative overflow-hidden">
         <div className="absolute top-[-40px] left-1/2 -translate-x-1/2 w-[260px] h-[260px] rounded-full bg-[radial-gradient(circle,rgba(243,124,2,0.2)_0%,transparent_70%)]" />
         <div className="relative">
-          <div className="flex items-center justify-center mb-6">
-            <img src="/logo.png" alt="Asthika Samaj" className="h-8" />
-          </div>
           <img src="/peryava.jpeg" alt="Peryava" className="w-14 h-auto rounded-lg mx-auto mb-4 border-2 border-white/15" />
           <h1 className="text-[1.4rem] text-white font-extrabold leading-tight tracking-tight font-syne">Build habits.<br /><em className="not-italic text-saffron-400">Track</em> your<br />daily sandhyavandana.</h1>
           <p className="text-white/50 text-sm mt-2">Log your Pratah, Madhyahnika & Saayam Sandhya</p>

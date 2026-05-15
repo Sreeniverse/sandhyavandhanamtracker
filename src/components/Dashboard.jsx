@@ -26,7 +26,7 @@ function ConsistencyRings({ stats }) {
 
 export default function Dashboard() {
   const { user } = useAuth()
-  const { today, history, loading, logAction, selectedDate, navigateDate, goToToday, isToday, isPastDate, canGoBack, canGoForward } = useActivities()
+  const { today, history, loading, error, logAction, selectedDate, navigateDate, goToToday, isToday, isPastDate, canGoBack, canGoForward } = useActivities()
   const stats = useStats(history)
 
   if (loading) {
@@ -39,6 +39,9 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-[900px] mx-auto px-4 md:px-6 py-6 md:py-10">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[10px] text-sm mb-4">{error}</div>
+      )}
       <div className="mb-6 md:mb-8">
         <div className="text-[0.72rem] md:text-xs text-gray-400 uppercase tracking-widest font-syne">Daily Sandhyavandhanam</div>
         <div className="flex items-center gap-3 mt-1">

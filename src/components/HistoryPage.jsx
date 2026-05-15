@@ -4,7 +4,7 @@ import { SLOTS } from '../utils/slots'
 import { formatDate } from '../utils/dates'
 
 export default function HistoryPage() {
-  const { history, loading } = useActivities()
+  const { history, loading, error } = useActivities()
   const stats = useStats(history)
 
   if (loading) {
@@ -15,6 +15,9 @@ export default function HistoryPage() {
 
   return (
     <div className="max-w-[900px] mx-auto px-4 md:px-6 py-6 md:py-10">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[10px] text-sm mb-4">{error}</div>
+      )}
       <div className="mb-5 md:mb-8">
         <div className="text-[0.65rem] md:text-[0.7rem] text-gray-400 uppercase tracking-widest font-syne">Sandhyavandhanam Archive</div>
         <div className="text-xl md:text-[2rem] font-extrabold tracking-tight font-syne mt-0.5">Full History</div>

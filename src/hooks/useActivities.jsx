@@ -8,6 +8,7 @@ export function useActivities() {
   const [today, setToday] = useState(null)
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [selectedDate, setSelectedDate] = useState(toDateString(new Date()))
 
   const todayStr = toDateString(new Date())
@@ -23,7 +24,7 @@ export function useActivities() {
       .single()
 
     if (error && error.code !== 'PGRST116') {
-      console.error(error)
+      setError('Failed to load activity data. Please try again.')
       return null
     }
 
@@ -52,7 +53,7 @@ export function useActivities() {
       .limit(90)
 
     if (error) {
-      console.error(error)
+      setError('Failed to load history. Please try again.')
       return []
     }
 
@@ -101,9 +102,10 @@ export function useActivities() {
       }, { onConflict: 'user_id,date' })
 
     if (error) {
-      console.error(error)
+      setError('Failed to save your entry. Please try again.')
       return
     }
+    setError('')
 
     const newToday = await fetchDay(selectedDate)
     setToday(newToday)
@@ -125,7 +127,7 @@ export function useActivities() {
   const isPastDate = selectedDate < todayStr
 
   return {
-    today, history, loading, logAction,
+    today, history, loading, error, logAction,
     selectedDate, navigateDate, goToToday,
     isToday, isPastDate, canGoBack: selectedDate > minDate,
     canGoForward: selectedDate < todayStr,

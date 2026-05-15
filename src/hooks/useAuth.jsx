@@ -90,6 +90,36 @@ export function AuthProvider({ children }) {
     const redirectTo = isNative()
       ? 'com.asthikasamaj.sandhyavandhanam://auth'
       : `${window.location.origin}`
+
+    if (isNative()) {
+      const [{ Browser }, { App }] = await Promise.all([
+        import('@capacitor/browser'),
+        import('@capacitor/app'),
+      ])
+
+      App.addListener('appUrlOpen', async ({ url }) => {
+        await Browser.close()
+        const hash = url.split('#')[1]
+        if (hash) {
+          const params = new URLSearchParams(hash)
+          const access_token = params.get('access_token')
+          const refresh_token = params.get('refresh_token')
+          if (access_token && refresh_token) {
+            await supabase.auth.setSession({ access_token, refresh_token })
+          }
+        }
+      })
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo, skipBrowserRedirect: true },
+      })
+      if (error) throw error
+
+      await Browser.open({ url: data.url, windowName: '_self' })
+      return
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo },

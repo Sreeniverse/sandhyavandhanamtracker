@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard'
 import HistoryPage from './components/HistoryPage'
 import ProfilePage from './components/ProfilePage'
 import CommunityPage from './components/CommunityPage'
+import NotFoundPage from './components/NotFoundPage'
 import { MfaVerify } from './components/MfaVerify'
 
 function ProtectedRoute({ children }) {
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="community" element={<CommunityPage />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }
