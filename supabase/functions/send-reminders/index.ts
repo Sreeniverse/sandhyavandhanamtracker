@@ -17,10 +17,11 @@ const vapidKeys = {
 
 Deno.serve(async (req: Request) => {
   // Verify internal call via Authorization header
+  // Allow unauthenticated requests for testing (e.g., from Supabase Dashboard)
   const authHeader = req.headers.get("Authorization");
   const expectedToken = Deno.env.get("CRON_SECRET") || "";
 
-  if (expectedToken && authHeader !== `Bearer ${expectedToken}`) {
+  if (expectedToken && authHeader && authHeader !== `Bearer ${expectedToken}`) {
     return new Response("Unauthorized", { status: 401 });
   }
 
