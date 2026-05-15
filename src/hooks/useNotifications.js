@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { isNative, scheduleAllReminders, cancelAllReminders } from '../utils/notifications'
 
@@ -21,7 +21,6 @@ function isPushSupported() {
 
 async function setupWebPush(userId) {
   if (!isPushSupported() || !VAPID_PUBLIC_KEY) return
-
   try {
     const registration = await navigator.serviceWorker.ready
     let subscription = await registration.pushManager.getSubscription()
@@ -38,15 +37,21 @@ async function setupWebPush(userId) {
       p256dh: sub.keys.p256dh,
       auth_key: sub.keys.auth,
     }, { onConflict: 'endpoint' })
-  } catch (_) {
-    // push setup is best-effort
-  }
+  } catch (_) {}
+}
+
+async function savePref(userId, val) {
+  const { error } = await supabase
+    .from('notification_preferences')
+    .upsert({ user_id: userId, enabled: val }, { onConflict: 'user_id' })
+  return error
 }
 
 export function useNotifications(user) {
   const [enabled, setEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const native = isNative()
 
   useEffect(() => {
     if (!user) {
@@ -64,50 +69,53 @@ export function useNotifications(user) {
       })
   }, [user])
 
-  const toggle = async () => {
+  const toggle = useCallback(() => {
     setError('')
+    setEnabled(prev => {
+      const next = !prev
 
-    if (enabled) {
-      setEnabled(false)
-      await cancelAllReminders()
-      await supabase
-        .from('notification_preferences')
-        .upsert({ user_id: user.id, enabled: false }, { onConflict: 'user_id' })
-      return
-    }
-
-    if (!isNative()) {
-      if (Notification.permission === 'denied') {
-        setError('Notifications are blocked. Enable them in your browser settings.')
-        return
-      }
-
-      if (Notification.permission === 'default') {
-        const result = await Notification.requestPermission()
-        if (result !== 'granted') {
-          setError('Notification permission was denied.')
-          return
+      if (next) {
+        // Enabling
+        if (!native) {
+          const perm = Notification.permission
+          if (perm === 'denied') {
+            setError('Notifications are blocked. Enable them in your browser settings.')
+            return false
+          }
+          if (perm === 'default') {
+            Notification.requestPermission().then(result => {
+              if (result === 'granted') {
+                setEnabled(true)
+              } else {
+                setError('Notification permission was denied.')
+              }
+            })
+            return false
+          }
         }
+      } else {
+        // Disabling
+        cancelAllReminders()
       }
-    }
 
-    setEnabled(true)
-
-    supabase
-      .from('notification_preferences')
-      .upsert({ user_id: user.id, enabled: true }, { onConflict: 'user_id' })
-      .then(({ error: prefError }) => {
-        if (prefError) setError('Failed to save: ' + prefError.message)
+      // Fire async work
+      savePref(user.id, next).then(err => {
+        if (err) setError('Failed to save: ' + err.message)
       })
 
-    if (isNative()) {
-      scheduleAllReminders()
-    } else {
-      setupWebPush(user.id)
-    }
-  }
+      if (next) {
+        if (native) {
+          scheduleAllReminders()
+        } else {
+          setupWebPush(user.id)
+        }
+      }
 
-  const supported = isNative() || isPushSupported()
+      return next
+    })
+  }, [user, native])
+
+  const supported = native || isPushSupported()
 
   return { enabled, loading, error, supported, toggle }
 }

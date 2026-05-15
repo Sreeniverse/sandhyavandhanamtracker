@@ -6,6 +6,7 @@ import { useNotifications } from '../hooks/useNotifications'
 import { SLOTS } from '../utils/slots'
 import { supabase } from '../supabase'
 import { MfaEnroll } from './MfaVerify'
+import pkg from '../../package.json'
 
 export default function ProfilePage() {
   const { user, updateProfile, deleteAccount } = useAuth()
@@ -162,16 +163,17 @@ export default function ProfilePage() {
             </div>
             {notifSupported ? (
               !notifLoading ? (
-                <button
+                <div
                   onClick={toggleNotif}
                   role="switch"
                   aria-checked={notifEnabled}
                   aria-label="Toggle daily reminders"
-                  className={`w-11 h-[26px] rounded-full relative cursor-pointer transition-colors border-0 p-0 flex items-center ${notifEnabled ? 'bg-saffron-600 justify-end' : 'bg-gray-300 justify-start'}`}
-                  style={{ WebkitAppearance: 'none', appearance: 'none' }}
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleNotif() }}}
+                  className={`w-11 h-[26px] rounded-full cursor-pointer transition-colors flex items-center flex-shrink-0 ${notifEnabled ? 'bg-saffron-600 justify-end' : 'bg-gray-300 justify-start'}`}
                 >
-                  <span className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform mx-[2px]`} />
-                </button>
+                  <span className="w-5 h-5 rounded-full bg-white shadow-sm mx-[2px]" />
+                </div>
               ) : (
                 <div className="w-5 h-5 border-2 border-warm border-t-saffron-600 rounded-full animate-spin" />
               )
@@ -183,7 +185,9 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <button className="w-full mt-6 py-3 bg-transparent text-red-600 border-1.5 border-red-600 rounded-xl md:rounded-[100px] font-syne font-bold text-sm cursor-pointer tracking-wide hover:bg-red-50 transition-colors" onClick={() => setShowDeleteConfirm(true)}>Delete Account & Data</button>
+      <div className="text-center mt-8 text-[0.65rem] text-gray-300 font-syne">v{pkg.version}</div>
+
+      <button className="w-full mt-2 py-3 bg-transparent text-red-600 border-1.5 border-red-600 rounded-xl md:rounded-[100px] font-syne font-bold text-sm cursor-pointer tracking-wide hover:bg-red-50 transition-colors" onClick={() => setShowDeleteConfirm(true)}>Delete Account & Data</button>
 
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
