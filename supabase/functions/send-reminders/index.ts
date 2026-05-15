@@ -16,14 +16,20 @@ const vapidKeys = {
 };
 
 Deno.serve(async (req: Request) => {
-  // Verify internal call via Authorization header
-  // Allow unauthenticated requests for testing (e.g., from Supabase Dashboard)
+  // Auth: only validate if CRON_SECRET is provided AND the caller claims to be
+  // our cron job. Skip auth for any other Authorization header (dashboard testing)
   const authHeader = req.headers.get("Authorization");
-  const expectedToken = Deno.env.get("CRON_SECRET") || "";
+  const cronSecret = Deno.env.get("CRON_SECRET") || "";
 
-  if (expectedToken && authHeader && authHeader !== `Bearer ${expectedToken}`) {
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+    // Authenticated cron call - proceed
+  } else if (authHeader && authHeader.startsWith("Bearer ey")) {
+    // Dashboard or other Supabase auth token - allow for testing
+  } else if (authHeader) {
+    // Some other auth header that doesn't match - reject
     return new Response("Unauthorized", { status: 401 });
   }
+  // No auth header at all - allow (for simple testing)
 
   try {
     // Get current time in IST (UTC+5:30)
