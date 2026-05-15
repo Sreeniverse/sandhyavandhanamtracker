@@ -9,10 +9,11 @@ import { MfaEnroll } from './MfaVerify'
 import { friendlyError } from '../utils/errors'
 
 export default function ProfilePage() {
-  const { user, updateProfile, deleteAccount, familyMembers, addFamilyMember, removeFamilyMember } = useAuth()
+  const { user, updateProfile, deleteAccount, familyMembers, addFamilyMember, removeFamilyMember, selectedProfile } = useAuth()
   const { history } = useActivities()
   const stats = useStats(history)
   const { enabled: notifEnabled, loading: notifLoading, error: notifError, supported: notifSupported, toggle: toggleNotif } = useNotifications(user)
+  const viewingSon = !!selectedProfile
   const [name, setName] = useState(user?.name || '')
   const [phone, setPhone] = useState(user?.phone || '')
   const [saving, setSaving] = useState(false)
@@ -83,9 +84,16 @@ export default function ProfilePage() {
     <div className="max-w-[900px] mx-auto px-4 md:px-6 py-6 md:py-10">
       <div className="text-xl md:text-[2rem] font-extrabold tracking-tight font-syne mb-5 md:mb-8">Profile & Settings</div>
 
+      {viewingSon && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-[10px] text-sm mb-4 font-syne">
+          Viewing {selectedProfile.name}'s profile. Settings below apply to your account. Switch to &ldquo;Me&rdquo; to edit them.
+        </div>
+      )}
+
       <div className="grid md:grid-cols-2 gap-4 md:gap-6">
         {/* Profile card */}
-        <div className="bg-white rounded-2xl md:rounded-[16px] p-5 md:p-6 shadow-md">
+        <div className={`bg-white rounded-2xl md:rounded-[16px] p-5 md:p-6 shadow-md relative ${viewingSon ? 'opacity-50 pointer-events-none' : ''}`}>
+          {viewingSon && <div className="absolute inset-0 z-10" />}
           <div className="text-[0.75rem] md:text-xs uppercase tracking-widest text-gray-400 font-syne font-semibold mb-4">Your Profile</div>
           <div className="flex items-center gap-4 mb-5">
             <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-saffron-400 to-saffron-600 flex items-center justify-center text-white font-syne text-xl md:text-2xl font-extrabold">
@@ -135,7 +143,8 @@ export default function ProfilePage() {
         </div>
 
         {/* Family */}
-        <div className="bg-white rounded-2xl md:rounded-[16px] shadow-md overflow-hidden">
+        <div className={`bg-white rounded-2xl md:rounded-[16px] shadow-md overflow-hidden relative ${viewingSon ? 'opacity-50 pointer-events-none' : ''}`}>
+          {viewingSon && <div className="absolute inset-0 z-10" />}
           <div className="text-[0.75rem] md:text-xs uppercase tracking-widest text-gray-400 font-syne font-semibold p-4 md:px-6 py-3 bg-cream">Family Members</div>
           <div className="p-4 md:p-6">
             {familyError && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-[10px] text-xs mb-3">{familyError}</div>}
@@ -174,7 +183,8 @@ export default function ProfilePage() {
         </div>
 
         {/* Security - 2FA */}
-        <div className="bg-white rounded-2xl md:rounded-[16px] shadow-md overflow-hidden">
+        <div className={`bg-white rounded-2xl md:rounded-[16px] shadow-md overflow-hidden relative ${viewingSon ? 'opacity-50 pointer-events-none' : ''}`}>
+          {viewingSon && <div className="absolute inset-0 z-10" />}
           <div className="text-[0.75rem] md:text-xs uppercase tracking-widest text-gray-400 font-syne font-semibold p-4 md:px-6 py-3 bg-cream">Security</div>
           <div className="p-4 md:p-6">
             {mfaError && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-[10px] text-xs mb-3">{mfaError}</div>}
@@ -208,7 +218,8 @@ export default function ProfilePage() {
         </div>
 
         {/* Preferences */}
-        <div className="bg-white rounded-2xl md:rounded-[16px] shadow-md overflow-hidden">
+        <div className={`bg-white rounded-2xl md:rounded-[16px] shadow-md overflow-hidden relative ${viewingSon ? 'opacity-50 pointer-events-none' : ''}`}>
+          {viewingSon && <div className="absolute inset-0 z-10" />}
           <div className="text-[0.75rem] md:text-xs uppercase tracking-widest text-gray-400 font-syne font-semibold p-4 md:px-6 py-3 bg-cream">Preferences</div>
           <div className="flex items-center justify-between px-4 md:px-6 py-3">
             <div>
@@ -244,7 +255,7 @@ export default function ProfilePage() {
       {deleteError && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[10px] text-sm mt-4">{deleteError}</div>
       )}
-      <button className="w-full mt-2 py-3 bg-transparent text-red-600 border-1.5 border-red-600 rounded-xl md:rounded-[100px] font-syne font-bold text-sm cursor-pointer tracking-wide hover:bg-red-50 transition-colors" onClick={() => setShowDeleteConfirm(true)}>Delete Account & Data</button>
+      <button className="w-full mt-2 py-3 bg-transparent text-red-600 border-1.5 border-red-600 rounded-xl md:rounded-[100px] font-syne font-bold text-sm cursor-pointer tracking-wide hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent" onClick={() => setShowDeleteConfirm(true)} disabled={viewingSon}>Delete Account & Data</button>
 
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
