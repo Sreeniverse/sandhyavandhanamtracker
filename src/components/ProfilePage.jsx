@@ -167,9 +167,11 @@ export default function ProfilePage() {
                   role="switch"
                   aria-checked={notifEnabled}
                   aria-label="Toggle daily reminders"
-                  className={`w-11 h-[26px] rounded-full relative cursor-pointer transition-colors border-0 p-0 after:content-[''] after:absolute after:top-[3px] after:w-5 after:h-5 after:rounded-full after:bg-white after:shadow-sm after:transition-transform ${notifEnabled ? 'bg-saffron-600 after:translate-x-[18px]' : 'bg-warm after:translate-x-0'}`}
+                  className={`w-11 h-[26px] rounded-full relative cursor-pointer transition-colors border-0 p-0 flex items-center ${notifEnabled ? 'bg-saffron-600 justify-end' : 'bg-gray-300 justify-start'}`}
                   style={{ WebkitAppearance: 'none', appearance: 'none' }}
-                />
+                >
+                  <span className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform mx-[2px]`} />
+                </button>
               ) : (
                 <div className="w-5 h-5 border-2 border-warm border-t-saffron-600 rounded-full animate-spin" />
               )
