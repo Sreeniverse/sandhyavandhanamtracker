@@ -1,9 +1,10 @@
+import { useAuth } from '../hooks/useAuth'
 import { useActivities } from '../hooks/useActivities'
 import { useStats } from '../hooks/useStats'
 import { SLOTS } from '../utils/slots'
-import { formatDate } from '../utils/dates'
 
 export default function HistoryPage() {
+  const { selectedProfile, familyMembers } = useAuth()
   const { history, loading, error } = useActivities()
   const stats = useStats(history)
 
@@ -21,6 +22,9 @@ export default function HistoryPage() {
       <div className="mb-5 md:mb-8">
         <div className="text-[0.65rem] md:text-[0.7rem] text-gray-400 uppercase tracking-widest font-syne">Sandhyavandhanam Archive</div>
         <div className="text-xl md:text-[2rem] font-extrabold tracking-tight font-syne mt-0.5">Full History</div>
+        {selectedProfile && (
+          <div className="text-sm text-blue-600 font-semibold font-syne mt-0.5">Showing history for: {selectedProfile.name}</div>
+        )}
       </div>
 
       {/* 5 stat cards */}
@@ -59,6 +63,11 @@ export default function HistoryPage() {
                   {new Date(record.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                 </div>
                 {record.date === todayStr && <div className="text-[0.65rem] text-saffron-600 font-semibold">Today</div>}
+                {record.profile_for && (
+                  <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full text-[0.52rem] font-bold font-syne uppercase tracking-wider">
+                    {familyMembers.find(m => m.id === record.profile_for)?.name || 'Son'}
+                  </span>
+                )}
               </div>
               <div className="flex gap-3 md:gap-6 flex-1 justify-end">
                 {SLOTS.map((slot) => {
