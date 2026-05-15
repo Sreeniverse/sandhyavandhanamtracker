@@ -6,6 +6,7 @@ import { useNotifications } from '../hooks/useNotifications'
 import { SLOTS } from '../utils/slots'
 import { supabase } from '../supabase'
 import { MfaEnroll } from './MfaVerify'
+import { friendlyError } from '../utils/errors'
 import pkg from '../../package.json'
 
 export default function ProfilePage() {
@@ -18,6 +19,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [mfaEnrolled, setMfaEnrolled] = useState(false)
   const [mfaLoading, setMfaLoading] = useState(true)
@@ -43,7 +45,7 @@ export default function ProfilePage() {
       setSaveMsg('Saved!')
       setTimeout(() => setSaveMsg(''), 2000)
     } catch (err) {
-      setSaveMsg(err.message)
+      setSaveMsg(friendlyError(err))
     } finally {
       setSaving(false)
     }
@@ -51,9 +53,11 @@ export default function ProfilePage() {
 
   const handleDelete = async () => {
     setDeleting(true)
+    setDeleteError('')
     try {
       await deleteAccount()
     } catch (err) {
+      setDeleteError(friendlyError(err))
       setDeleting(false)
       setShowDeleteConfirm(false)
     }
@@ -70,7 +74,7 @@ export default function ProfilePage() {
         setMfaEnrolled(false)
       }
     } catch (err) {
-      setMfaError(err.message || 'Failed to disable 2FA. Please try again.')
+      setMfaError(friendlyError(err))
     }
   }
 
@@ -143,7 +147,7 @@ export default function ProfilePage() {
                       <div className="w-6 h-6 rounded-full bg-saffron-200 flex items-center justify-center text-saffron-700 font-syne font-bold text-[0.65rem]">{m.name[0]}</div>
                       <span className="text-sm font-semibold">{m.name}</span>
                     </div>
-                    <button onClick={async () => { setFamilyError(''); try { await removeFamilyMember(m.id) } catch (err) { setFamilyError(err.message || 'Failed to remove family member.') }}} className="text-xs text-red-500 font-syne font-semibold cursor-pointer hover:text-red-700 bg-transparent border-0">Remove</button>
+                    <button onClick={async () => { setFamilyError(''); try { await removeFamilyMember(m.id) } catch (err) { setFamilyError(friendlyError(err)) }}} className="text-xs text-red-500 font-syne font-semibold cursor-pointer hover:text-red-700 bg-transparent border-0">Remove</button>
                   </div>
                 ))}
               </div>
@@ -155,11 +159,11 @@ export default function ProfilePage() {
                 placeholder="Son's name"
                 value={newChildName}
                 onChange={e => setNewChildName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && newChildName.trim()) { setAddingChild(true); setFamilyError(''); addFamilyMember(newChildName).then(() => { setNewChildName(''); setAddingChild(false) }).catch(err => { setFamilyError(err.message || 'Failed to add family member.'); setAddingChild(false) }) }}}
+                onKeyDown={e => { if (e.key === 'Enter' && newChildName.trim()) { setAddingChild(true); setFamilyError(''); addFamilyMember(newChildName).then(() => { setNewChildName(''); setAddingChild(false) }).catch(err => { setFamilyError(friendlyError(err)); setAddingChild(false) }) }}}
               />
               <button
                 className="px-4 py-2 bg-ink text-white rounded-[10px] font-syne font-bold text-xs cursor-pointer hover:bg-[#222] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
-                onClick={async () => { if (!newChildName.trim()) return; setAddingChild(true); setFamilyError(''); try { await addFamilyMember(newChildName); setNewChildName('') } catch (err) { setFamilyError(err.message || 'Failed to add family member.') } finally { setAddingChild(false) }}}
+                onClick={async () => { if (!newChildName.trim()) return; setAddingChild(true); setFamilyError(''); try { await addFamilyMember(newChildName); setNewChildName('') } catch (err) { setFamilyError(friendlyError(err)) } finally { setAddingChild(false) }}}
                 disabled={addingChild || !newChildName.trim()}
               >
                 {addingChild ? '...' : '+ Add Son'}
@@ -236,6 +240,9 @@ export default function ProfilePage() {
 
       <div className="text-center mt-8 text-[0.65rem] text-gray-300 font-syne">v{pkg.version}</div>
 
+      {deleteError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[10px] text-sm mt-4">{deleteError}</div>
+      )}
       <button className="w-full mt-2 py-3 bg-transparent text-red-600 border-1.5 border-red-600 rounded-xl md:rounded-[100px] font-syne font-bold text-sm cursor-pointer tracking-wide hover:bg-red-50 transition-colors" onClick={() => setShowDeleteConfirm(true)}>Delete Account & Data</button>
 
       {showDeleteConfirm && (

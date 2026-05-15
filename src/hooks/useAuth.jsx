@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { isNative } from '../utils/notifications'
+import { friendlyError } from '../utils/errors'
 
 const AuthContext = createContext(null)
 
@@ -92,13 +93,13 @@ export function AuthProvider({ children }) {
         emailRedirectTo: redirectTo,
       },
     })
-    if (error) throw error
+    if (error) throw new Error(friendlyError(error))
     setSignupDone(true)
   }
 
   const signIn = async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
+    if (error) throw new Error(friendlyError(error))
   }
 
   const signInWithGoogle = async () => {
@@ -129,7 +130,7 @@ export function AuthProvider({ children }) {
         provider: 'google',
         options: { redirectTo, skipBrowserRedirect: true },
       })
-      if (error) throw error
+      if (error) throw new Error(friendlyError(error))
 
       await Browser.open({ url: data.url, windowName: '_self' })
       return
@@ -139,7 +140,7 @@ export function AuthProvider({ children }) {
       provider: 'google',
       options: { redirectTo },
     })
-    if (error) throw error
+    if (error) throw new Error(friendlyError(error))
   }
 
   const updateProfile = async (updates) => {
@@ -148,7 +149,7 @@ export function AuthProvider({ children }) {
       .from('profiles')
       .update({ name: updates.name, phone: updates.phone })
       .eq('id', user.id)
-    if (error) throw error
+    if (error) throw new Error(friendlyError(error))
     setUser({ ...user, name: updates.name, phone: updates.phone })
   }
 
@@ -159,7 +160,7 @@ export function AuthProvider({ children }) {
       .insert({ parent_id: user.id, name: name.trim() })
       .select()
       .single()
-    if (error) throw error
+    if (error) throw new Error(friendlyError(error))
     setFamilyMembers(prev => [...prev, data])
     return data
   }
@@ -169,7 +170,7 @@ export function AuthProvider({ children }) {
       .from('family_members')
       .delete()
       .eq('id', id)
-    if (error) throw error
+    if (error) throw new Error(friendlyError(error))
     setFamilyMembers(prev => prev.filter(m => m.id !== id))
   }
 
@@ -177,23 +178,23 @@ export function AuthProvider({ children }) {
     if (!user) throw new Error('Not authenticated')
 
     const { error: famErr } = await supabase.from('family_members').delete().eq('parent_id', user.id)
-    if (famErr) throw new Error('Failed to delete family data: ' + famErr.message)
+    if (famErr) throw new Error(friendlyError(famErr))
 
     const { error: actErr } = await supabase.from('activities').delete().eq('user_id', user.id)
-    if (actErr) throw new Error('Failed to delete activity data: ' + actErr.message)
+    if (actErr) throw new Error(friendlyError(actErr))
 
     const { error: profErr } = await supabase.from('profiles').delete().eq('id', user.id)
-    if (profErr) throw new Error('Failed to delete profile: ' + profErr.message)
+    if (profErr) throw new Error(friendlyError(profErr))
 
     const { error: authErr } = await supabase.auth.signOut()
-    if (authErr) throw new Error('Failed to sign out: ' + authErr.message)
+    if (authErr) throw new Error(friendlyError(authErr))
 
     setUser(null)
   }
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut()
-    if (error) throw new Error('Failed to sign out: ' + error.message)
+    if (error) throw new Error(friendlyError(error))
     setUser(null)
     setNeedsMfa(false)
     setSignupDone(false)

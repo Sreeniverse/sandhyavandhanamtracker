@@ -4,6 +4,7 @@ import { useActivities } from '../hooks/useActivities'
 import { useStats } from '../hooks/useStats'
 import { supabase } from '../supabase'
 import { SLOTS } from '../utils/slots'
+import { friendlyError } from '../utils/errors'
 
 export default function CommunityPage() {
   const { user } = useAuth()
@@ -41,8 +42,8 @@ export default function CommunityPage() {
           setYourStreak(me.streak)
         }
       }
-    } catch (_) {
-      setError('Community features are temporarily unavailable. Please try again later.')
+    } catch (err) {
+      setError(friendlyError(err))
     } finally {
       setLoading(false)
       setRetrying(false)

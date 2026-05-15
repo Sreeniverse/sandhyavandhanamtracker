@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from './useAuth'
 import { toDateString } from '../utils/dates'
+import { friendlyError } from '../utils/errors'
 
 export function useActivities() {
   const { user } = useAuth()
@@ -24,7 +25,7 @@ export function useActivities() {
       .single()
 
     if (error && error.code !== 'PGRST116') {
-      setError('Failed to load activity data. Please try again.')
+      setError(friendlyError(error))
       return null
     }
 
@@ -53,7 +54,7 @@ export function useActivities() {
       .limit(90)
 
     if (error) {
-      setError('Failed to load history. Please try again.')
+      setError(friendlyError(error))
       return []
     }
 
@@ -124,7 +125,7 @@ export function useActivities() {
 
     const { error } = await query
     if (error) {
-      setError('Failed to save your entry. Please try again.')
+      setError(friendlyError(error))
       return
     }
     setError('')

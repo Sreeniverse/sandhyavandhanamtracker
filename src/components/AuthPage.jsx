@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { friendlyError } from '../utils/errors'
 
 function validate(form, tab) {
   const errors = {}
@@ -44,7 +45,7 @@ export default function AuthPage() {
         await signUp(form.email, form.password, form.name)
       }
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     } finally {
       setLoading(false)
     }
@@ -55,7 +56,7 @@ export default function AuthPage() {
     try {
       await signInWithGoogle()
     } catch (err) {
-      setError(err.message)
+      setError(friendlyError(err))
     }
   }
 

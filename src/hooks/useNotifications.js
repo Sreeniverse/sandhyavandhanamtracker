@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { isNative, scheduleAllReminders, cancelAllReminders } from '../utils/notifications'
+import { friendlyError } from '../utils/errors'
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
 
@@ -100,7 +101,7 @@ export function useNotifications(user) {
 
       // Fire async work
       savePref(user.id, next).then(err => {
-        if (err) setError('Failed to save: ' + err.message)
+        if (err) setError(friendlyError(err))
       })
 
       if (next) {

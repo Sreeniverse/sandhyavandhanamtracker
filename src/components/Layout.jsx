@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { friendlyError } from '../utils/errors'
 
 export default function Layout() {
   const { user, signOut } = useAuth()
@@ -11,7 +12,7 @@ export default function Layout() {
     try {
       await signOut()
     } catch (err) {
-      setSignOutError(err.message || 'Failed to sign out. Please try again.')
+      setSignOutError(friendlyError(err))
     }
   }
 
