@@ -88,10 +88,10 @@ export default function Layout() {
       {/* Mobile bottom nav */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-ink border-t border-white/10 z-50">
         {familyMembers.length > 0 && (
-          <div className="flex gap-1 px-3 pt-1.5 pb-0.5 justify-center">
+          <div className="flex gap-2 px-3 pt-2 pb-1 justify-center">
             <button
               onClick={() => setSelectedProfile(null)}
-              className={`px-3 py-0.5 rounded-full text-[0.6rem] font-syne font-bold transition-colors ${!selectedProfile ? 'bg-saffron-500 text-white' : 'bg-white/10 text-white/50 hover:text-white/70'}`}
+              className={`px-4 py-1 rounded-full text-xs font-syne font-bold transition-colors ${!selectedProfile ? 'bg-saffron-500 text-white' : 'bg-white/10 text-white/50 hover:text-white/70'}`}
             >
               Me
             </button>
@@ -99,7 +99,7 @@ export default function Layout() {
               <button
                 key={m.id}
                 onClick={() => setSelectedProfile(m)}
-                className={`px-3 py-0.5 rounded-full text-[0.6rem] font-syne font-bold transition-colors ${selectedProfile?.id === m.id ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/50 hover:text-white/70'}`}
+                className={`px-4 py-1 rounded-full text-xs font-syne font-bold transition-colors ${selectedProfile?.id === m.id ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/50 hover:text-white/70'}`}
               >
                 {m.name}
               </button>
