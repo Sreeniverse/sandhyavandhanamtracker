@@ -60,19 +60,23 @@ export default function Layout() {
         <div className="flex items-center gap-3">
           <span className="text-xs text-white/50 hidden md:inline">Hey, <strong className="text-white/85">{user?.name?.split(' ')[0]}</strong></span>
           {familyMembers.length > 0 && (
-            <select
-              className="hidden md:block bg-white/8 border border-white/12 text-white/80 px-2 py-1 rounded-full text-xs font-syne font-semibold cursor-pointer outline-none"
-              value={selectedProfile?.id || ''}
-              onChange={(e) => {
-                const id = e.target.value
-                setSelectedProfile(id ? familyMembers.find(m => m.id === Number(id)) : null)
-              }}
-            >
-              <option value="">Me</option>
+            <div className="hidden md:flex gap-1">
+              <button
+                onClick={() => setSelectedProfile(null)}
+                className={`px-2.5 py-0.5 rounded-full text-xs font-syne font-bold transition-colors ${!selectedProfile ? 'bg-saffron-500 text-white' : 'bg-white/10 text-white/50 hover:text-white/70'}`}
+              >
+                Me
+              </button>
               {familyMembers.map(m => (
-                <option key={m.id} value={m.id}>{m.name}</option>
+                <button
+                  key={m.id}
+                  onClick={() => setSelectedProfile(m)}
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-syne font-bold transition-colors ${selectedProfile?.id === m.id ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/50 hover:text-white/70'}`}
+                >
+                  {m.name}
+                </button>
               ))}
-            </select>
+            </div>
           )}
           <div className={`w-7 h-7 md:w-[30px] md:h-[30px] rounded-full flex items-center justify-center text-white font-syne font-bold text-xs ${selectedProfile ? 'bg-gradient-to-br from-blue-400 to-blue-600' : 'bg-gradient-to-br from-saffron-400 to-saffron-600'}`}>
             {selectedProfile ? selectedProfile.name[0]?.toUpperCase() : user?.name?.[0]}
@@ -87,7 +91,7 @@ export default function Layout() {
           <div className="flex gap-1 px-3 pt-1.5 pb-0.5 justify-center">
             <button
               onClick={() => setSelectedProfile(null)}
-              className={`px-3 py-0.5 rounded-full text-[0.6rem] font-syne font-bold transition-colors ${!selectedProfile ? 'bg-saffron-500 text-white' : 'bg-white/8 text-white/50'}`}
+              className={`px-3 py-0.5 rounded-full text-[0.6rem] font-syne font-bold transition-colors ${!selectedProfile ? 'bg-saffron-500 text-white' : 'bg-white/10 text-white/50 hover:text-white/70'}`}
             >
               Me
             </button>
@@ -95,7 +99,7 @@ export default function Layout() {
               <button
                 key={m.id}
                 onClick={() => setSelectedProfile(m)}
-                className={`px-3 py-0.5 rounded-full text-[0.6rem] font-syne font-bold transition-colors ${selectedProfile?.id === m.id ? 'bg-blue-500 text-white' : 'bg-white/8 text-white/50'}`}
+                className={`px-3 py-0.5 rounded-full text-[0.6rem] font-syne font-bold transition-colors ${selectedProfile?.id === m.id ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/50 hover:text-white/70'}`}
               >
                 {m.name}
               </button>
