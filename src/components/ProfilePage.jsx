@@ -7,7 +7,6 @@ import { SLOTS } from '../utils/slots'
 import { supabase } from '../supabase'
 import { MfaEnroll } from './MfaVerify'
 import { friendlyError } from '../utils/errors'
-import pkg from '../../package.json'
 
 export default function ProfilePage() {
   const { user, updateProfile, deleteAccount, familyMembers, addFamilyMember, removeFamilyMember } = useAuth()
@@ -28,6 +27,8 @@ export default function ProfilePage() {
   const [addingChild, setAddingChild] = useState(false)
   const [familyError, setFamilyError] = useState('')
   const [mfaError, setMfaError] = useState('')
+  const [removeConfirm, setRemoveConfirm] = useState(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   useEffect(() => {
     supabase.auth.mfa.listFactors().then(({ data }) => {
@@ -147,7 +148,7 @@ export default function ProfilePage() {
                       <div className="w-6 h-6 rounded-full bg-saffron-200 flex items-center justify-center text-saffron-700 font-syne font-bold text-[0.65rem]">{m.name[0]}</div>
                       <span className="text-sm font-semibold">{m.name}</span>
                     </div>
-                    <button onClick={async () => { setFamilyError(''); try { await removeFamilyMember(m.id) } catch (err) { setFamilyError(friendlyError(err)) }}} className="text-xs text-red-500 font-syne font-semibold cursor-pointer hover:text-red-700 bg-transparent border-0">Remove</button>
+                    <button onClick={() => setRemoveConfirm(m)} className="text-xs text-red-500 font-syne font-semibold cursor-pointer hover:text-red-700 bg-transparent border-0">Remove</button>
                   </div>
                 ))}
               </div>
@@ -238,7 +239,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="text-center mt-8 text-[0.65rem] text-gray-300 font-syne">v{pkg.version}</div>
+      <div className="text-center mt-8 text-[0.65rem] text-gray-300 font-syne">v0.1.13</div>
 
       {deleteError && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[10px] text-sm mt-4">{deleteError}</div>
@@ -249,10 +250,25 @@ export default function ProfilePage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
             <h3 className="text-lg font-bold font-syne text-ink mb-2">Delete Account?</h3>
-            <p className="text-sm text-gray-500 mb-5">This will permanently delete your account and all tracking data. This action cannot be undone.</p>
+            <p className="text-sm text-gray-500 mb-4">This will permanently delete your account and all tracking data. This action cannot be undone.</p>
+            <p className="text-sm text-gray-500 mb-3">Type <strong>DELETE</strong> to confirm:</p>
+            <input className="w-full px-3 py-2.5 border border-warm rounded-[10px] bg-white font-dm text-sm text-ink outline-none focus:border-red-500 mb-4" type="text" placeholder="Type DELETE" value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} />
             <div className="flex gap-3">
-              <button className="flex-1 py-2.5 border border-warm rounded-[10px] font-syne font-semibold text-sm cursor-pointer hover:bg-cream transition-colors" onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>Cancel</button>
-              <button className="flex-1 py-2.5 bg-red-600 text-white border-none rounded-[10px] font-syne font-bold text-sm cursor-pointer hover:bg-red-700 transition-colors disabled:bg-gray-300" onClick={handleDelete} disabled={deleting}>{deleting ? 'Deleting...' : 'Yes, Delete'}</button>
+              <button className="flex-1 py-2.5 border border-warm rounded-[10px] font-syne font-semibold text-sm cursor-pointer hover:bg-cream transition-colors" onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText('') }} disabled={deleting}>Cancel</button>
+              <button className="flex-1 py-2.5 bg-red-600 text-white border-none rounded-[10px] font-syne font-bold text-sm cursor-pointer hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed" onClick={handleDelete} disabled={deleting || deleteConfirmText !== 'DELETE'}>{deleting ? 'Deleting...' : 'Delete Account'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {removeConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-bold font-syne text-ink mb-2">Remove {removeConfirm.name}?</h3>
+            <p className="text-sm text-gray-500 mb-5">This will delete all of {removeConfirm.name}'s tracked rituals. This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button className="flex-1 py-2.5 border border-warm rounded-[10px] font-syne font-semibold text-sm cursor-pointer hover:bg-cream transition-colors" onClick={() => setRemoveConfirm(null)}>Cancel</button>
+              <button className="flex-1 py-2.5 bg-red-600 text-white border-none rounded-[10px] font-syne font-bold text-sm cursor-pointer hover:bg-red-700 transition-colors" onClick={async () => { try { await removeFamilyMember(removeConfirm.id) } catch (err) { setFamilyError(friendlyError(err)) } setRemoveConfirm(null) }}>Remove</button>
             </div>
           </div>
         </div>

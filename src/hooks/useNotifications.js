@@ -21,7 +21,10 @@ function isPushSupported() {
 }
 
 async function setupWebPush(userId) {
-  if (!isPushSupported() || !VAPID_PUBLIC_KEY) return
+  if (!isPushSupported() || !VAPID_PUBLIC_KEY) {
+    console.warn('Web Push not supported or VAPID key missing')
+    return
+  }
   try {
     const registration = await navigator.serviceWorker.ready
     let subscription = await registration.pushManager.getSubscription()
@@ -38,7 +41,9 @@ async function setupWebPush(userId) {
       p256dh: sub.keys.p256dh,
       auth_key: sub.keys.auth,
     }, { onConflict: 'endpoint' })
-  } catch (_) {}
+  } catch (err) {
+    console.error('Failed to setup web push:', err)
+  }
 }
 
 async function savePref(userId, val) {
@@ -70,51 +75,49 @@ export function useNotifications(user) {
       })
   }, [user])
 
-  const toggle = useCallback(() => {
+  const toggle = useCallback(async () => {
     setError('')
-    setEnabled(prev => {
-      const next = !prev
+    const next = !enabled
 
-      if (next) {
-        // Enabling
-        if (!native) {
-          const perm = Notification.permission
-          if (perm === 'denied') {
-            setError('Notifications are blocked. Enable them in your browser settings.')
-            return false
-          }
-          if (perm === 'default') {
-            Notification.requestPermission().then(result => {
-              if (result === 'granted') {
-                setEnabled(true)
-              } else {
-                setError('Notification permission was denied.')
-              }
-            })
-            return false
+    if (next) {
+      // Enabling
+      if (!native) {
+        const perm = Notification.permission
+        if (perm === 'denied') {
+          setError('Notifications are blocked. Enable them in your browser settings.')
+          return
+        }
+        if (perm === 'default') {
+          const result = await Notification.requestPermission()
+          if (result !== 'granted') {
+            setError('Notification permission was denied.')
+            return
           }
         }
-      } else {
-        // Disabling
+      }
+    } else {
+      // Disabling
+      if (native) {
         cancelAllReminders()
       }
+    }
 
-      // Fire async work
-      savePref(user.id, next).then(err => {
-        if (err) setError(friendlyError(err))
-      })
+    const saveError = await savePref(user.id, next)
+    if (saveError) {
+      setError(friendlyError(saveError))
+      return
+    }
 
-      if (next) {
-        if (native) {
-          scheduleAllReminders()
-        } else {
-          setupWebPush(user.id)
-        }
+    setEnabled(next)
+
+    if (next) {
+      if (native) {
+        await scheduleAllReminders()
+      } else {
+        await setupWebPush(user.id)
       }
-
-      return next
-    })
-  }, [user, native])
+    }
+  }, [user, native, enabled])
 
   const supported = native || isPushSupported()
 

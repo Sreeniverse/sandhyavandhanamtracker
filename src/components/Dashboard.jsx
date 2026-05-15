@@ -26,10 +26,10 @@ function ConsistencyRings({ stats }) {
 }
 
 export default function Dashboard() {
-  const { user, familyMembers } = useAuth()
+  const { user, selectedProfile, familyMembers } = useAuth()
   const { today, history, loading, error, logAction, selectedDate, navigateDate, goToToday, isToday, isPastDate, canGoBack, canGoForward } = useActivities()
   const stats = useStats(history)
-  const [selectingFor, setSelectingFor] = useState(null)
+  const [confirmUndone, setConfirmUndone] = useState(null)
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[60vh]"><div className="w-7 h-7 border-3 border-warm border-t-saffron-600 rounded-full animate-spin" /></div>
@@ -77,6 +77,9 @@ export default function Dashboard() {
         <div className="text-gray-400 text-sm mt-1">
           {completedSlots} of 3 rituals completed
         </div>
+        {selectedProfile && (
+          <div className="text-[0.72rem] text-blue-600 font-semibold font-syne mt-1">Viewing: {selectedProfile.name}'s Rituals</div>
+        )}
         {isPastDate && (
           <div className="text-[0.72rem] text-saffron-600 font-semibold font-syne mt-1">Viewing past date - you can mark rituals if missed</div>
         )}
@@ -106,17 +109,12 @@ export default function Dashboard() {
               <button
                 className={`w-full py-3 mt-auto rounded-[10px] font-syne text-xs md:text-sm font-bold cursor-pointer tracking-wide border-1.5 transition-all ${done ? 'bg-transparent text-success border-success hover:bg-green-50' : 'bg-ink text-white border-ink hover:bg-[#222]'}`}
                 onClick={async () => {
-                  const action = done ? 'undone' : 'done'
-                  if (familyMembers.length > 0) {
-                    setSelectingFor({ slot: slot.key, action })
-                  } else {
-                    await logAction(slot.key, action)
-                    if (action === 'done') {
-                      await cancelSlotReminder(slot.key)
-                    } else {
-                      await scheduleAllReminders()
-                    }
+                  if (done) {
+                    setConfirmUndone(slot.key)
+                    return
                   }
+                  await logAction(slot.key, 'done')
+                  await cancelSlotReminder(slot.key)
                 }}
               >
                 {done ? '↩ Mark Undone' : '✓ Mark as Done'}
@@ -134,6 +132,11 @@ export default function Dashboard() {
               <div key={record.id || record.date} className={`rounded-[10px] md:rounded-[10px] px-4 py-3 md:py-3.5 shadow-sm grid grid-cols-1 md:grid-cols-[140px_repeat(3,1fr)] items-center gap-2 md:gap-4 ${record.date === selectedDate ? 'bg-saffron-100/50' : 'bg-white'}`}>
                 <div>
                   <div className="font-syne font-bold text-sm text-ink">{new Date(record.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+                  {record.profile_for && (
+                    <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full text-[0.52rem] font-bold font-syne uppercase tracking-wider">
+                      {familyMembers.find(m => m.id === record.profile_for)?.name || 'Son'}
+                    </span>
+                  )}
                 </div>
                 {SLOTS.map((slot) => {
                   const s = record[slot.key] || {}
@@ -154,45 +157,18 @@ export default function Dashboard() {
         </div>
       )}
 
-      {selectingFor && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectingFor(null)}>
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold font-syne text-ink mb-1">Who completed this ritual?</h3>
-            <p className="text-sm text-gray-400 mb-4">{SLOTS.find(s => s.key === selectingFor.slot)?.label} Sandhyavandhanam</p>
-            <div className="flex flex-col gap-2">
-              <button
-                className="w-full py-3 bg-ink text-white rounded-[10px] font-syne font-bold text-sm cursor-pointer hover:bg-[#222] transition-colors"
-                onClick={async () => {
-                  const { slot, action } = selectingFor
-                  setSelectingFor(null)
-                  await logAction(slot, action)
-                  if (action === 'done') await cancelSlotReminder(slot)
-                  else await scheduleAllReminders()
-                }}
-              >
-                Me
-              </button>
-              {familyMembers.map(m => (
-                <button
-                  key={m.id}
-                  className="w-full py-3 bg-saffron-50 text-saffron-800 border border-saffron-200 rounded-[10px] font-syne font-bold text-sm cursor-pointer hover:bg-saffron-100 transition-colors"
-                  onClick={async () => {
-                    const { slot, action } = selectingFor
-                    setSelectingFor(null)
-                    await logAction(slot, action, m.id)
-                    if (action === 'done') await cancelSlotReminder(slot)
-                    else await scheduleAllReminders()
-                  }}
-                >
-                  {m.name}
-                </button>
-              ))}
-              <button
-                className="w-full py-2.5 text-gray-400 bg-transparent font-syne font-semibold text-sm cursor-pointer hover:text-ink transition-colors mt-1"
-                onClick={() => setSelectingFor(null)}
-              >
-                Cancel
-              </button>
+      {confirmUndone && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-bold font-syne text-ink mb-2">Mark as Undone?</h3>
+            <p className="text-sm text-gray-500 mb-5">This will undo your {SLOTS.find(s => s.key === confirmUndone)?.label || ''} ritual for this day.</p>
+            <div className="flex gap-3">
+              <button className="flex-1 py-2.5 border border-warm rounded-[10px] font-syne font-semibold text-sm cursor-pointer hover:bg-cream transition-colors" onClick={() => setConfirmUndone(null)}>Cancel</button>
+              <button className="flex-1 py-2.5 bg-red-600 text-white border-none rounded-[10px] font-syne font-bold text-sm cursor-pointer hover:bg-red-700 transition-colors" onClick={async () => {
+                await logAction(confirmUndone, 'undone')
+                await scheduleAllReminders()
+                setConfirmUndone(null)
+              }}>Yes, Undo</button>
             </div>
           </div>
         </div>

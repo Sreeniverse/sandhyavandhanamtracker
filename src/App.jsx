@@ -20,7 +20,7 @@ export default function App() {
   const { user, loading, needsMfa } = useAuth()
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-paper"><div className="w-3 h-3 rounded-full bg-saffron-600 animate-pulse" /></div>
+    return <div className="min-h-screen flex items-center justify-center bg-paper"><div className="w-7 h-7 border-3 border-warm border-t-saffron-600 rounded-full animate-spin" /></div>
   }
 
   if (needsMfa) {

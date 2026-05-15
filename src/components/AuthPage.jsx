@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { supabase } from '../supabase'
 import { friendlyError } from '../utils/errors'
 
 function validate(form, tab) {
@@ -11,8 +12,8 @@ function validate(form, tab) {
   }
   if (!form.password) {
     errors.password = 'Password is required.'
-  } else if (form.password.length < 6) {
-    errors.password = 'Password must be at least 6 characters.'
+  } else if (form.password.length < 8) {
+    errors.password = 'Password must be at least 8 characters.'
   }
   if (tab === 'register' && !form.name.trim()) {
     errors.name = 'Name is required.'
@@ -27,6 +28,11 @@ export default function AuthPage() {
   const [error, setError] = useState('')
   const [form, setForm] = useState({ name: '', email: '', password: '' })
   const [touched, setTouched] = useState({})
+  const [showPassword, setShowPassword] = useState(false)
+  const [showReset, setShowReset] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetMsg, setResetMsg] = useState('')
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const blur = (k) => () => setTouched((t) => ({ ...t, [k]: true }))
 
@@ -60,12 +66,60 @@ export default function AuthPage() {
     }
   }
 
+  const handleResetPassword = async () => {
+    setResetMsg('')
+    setResetLoading(true)
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: window.location.origin + '/auth',
+      })
+      if (error) throw error
+      setResetMsg('Check your email for a password reset link.')
+    } catch (err) {
+      setResetMsg(friendlyError(err))
+    } finally {
+      setResetLoading(false)
+    }
+  }
+
   const fieldError = (field) => touched[field] ? errors[field] : null
 
   const inputClass = (field) =>
     `w-full px-3 py-3 border rounded-[10px] bg-white font-dm text-sm text-ink outline-none transition-all focus:border-saffron-500 focus:shadow-[0_0_0_3px_rgba(255,153,51,0.12)] ${
       fieldError(field) ? 'border-red-400 bg-red-50/30' : 'border-warm'
     }`
+
+  if (showReset) {
+    return (
+      <div className="min-h-screen grid md:grid-cols-2">
+        <div className="hidden md:flex bg-ink flex-col justify-end p-12 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(200,68,26,0.3)_0%,transparent_60%),radial-gradient(ellipse_at_80%_80%,rgba(124,58,237,0.2)_0%,transparent_60%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[length:28px_28px]" />
+          <div className="relative z-10">
+            <h1 className="text-[1.85rem] text-white font-extrabold leading-tight tracking-tight mb-5 font-syne">Reset your<br /><em className="not-italic text-saffron-400">password</em></h1>
+            <p className="text-white/50 text-base max-w-[360px]">We'll send you a link to set a new password.</p>
+          </div>
+        </div>
+        <div className="flex flex-col justify-center px-6 md:px-12 py-8 md:py-0 bg-paper">
+          <div className="max-w-[380px] mx-auto w-full">
+            <h2 className="text-2xl font-extrabold font-syne tracking-tight mb-1">Forgot Password?</h2>
+            <p className="text-gray-400 text-sm mb-5">Enter your email and we'll send you a reset link.</p>
+            {resetMsg && <div className="bg-saffron-50 border border-saffron-200 text-saffron-700 px-3.5 py-2.5 rounded-[10px] text-sm mb-4">{resetMsg}</div>}
+            <div className="mb-3">
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5 font-syne uppercase tracking-wider">Email Address</label>
+              <input className={inputClass('email')} type="email" placeholder="you@example.com" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} />
+            </div>
+            <button className="w-full py-3.5 bg-ink text-white border-none rounded-[10px] font-syne font-bold text-sm cursor-pointer tracking-wide hover:bg-[#222] active:scale-[0.99] transition-all disabled:bg-gray-300 disabled:cursor-not-allowed" onClick={handleResetPassword} disabled={resetLoading || !resetEmail}>
+              {resetLoading ? 'Sending...' : 'Send Reset Link'}
+            </button>
+            <button className="w-full mt-3 py-2.5 bg-transparent text-gray-500 border-none rounded-[10px] font-syne font-semibold text-sm cursor-pointer hover:text-ink transition-colors" onClick={() => { setShowReset(false); setResetMsg('') }}>
+              Back to Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen grid md:grid-cols-2">
@@ -158,23 +212,32 @@ export default function AuthPage() {
 
           {tab === 'register' && (
             <div className="mb-3">
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 font-syne uppercase tracking-wider">Your Name</label>
-              <input className={inputClass('name')} type="text" placeholder="Alex Johnson" value={form.name} onChange={set('name')} onBlur={blur('name')} onKeyDown={(e) => e.key === 'Enter' && handleSubmit()} />
+              <label htmlFor="name" className="block text-xs font-semibold text-gray-500 mb-1.5 font-syne uppercase tracking-wider">Your Name</label>
+              <input id="name" className={inputClass('name')} type="text" placeholder="Alex Johnson" value={form.name} onChange={set('name')} onBlur={blur('name')} onKeyDown={(e) => e.key === 'Enter' && handleSubmit()} />
               {fieldError('name') && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
             </div>
           )}
 
           <div className="mb-3">
-            <label className="block text-xs font-semibold text-gray-500 mb-1.5 font-syne uppercase tracking-wider">Email Address</label>
-            <input className={inputClass('email')} type="email" placeholder="you@example.com" value={form.email} onChange={set('email')} onBlur={blur('email')} onKeyDown={(e) => e.key === 'Enter' && handleSubmit()} />
+            <label htmlFor="email" className="block text-xs font-semibold text-gray-500 mb-1.5 font-syne uppercase tracking-wider">Email Address</label>
+            <input id="email" className={inputClass('email')} type="email" placeholder="you@example.com" value={form.email} onChange={set('email')} onBlur={blur('email')} onKeyDown={(e) => e.key === 'Enter' && handleSubmit()} />
             {fieldError('email') && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
           </div>
 
           <div className="mb-4">
-            <label className="block text-xs font-semibold text-gray-500 mb-1.5 font-syne uppercase tracking-wider">Password</label>
-            <input className={inputClass('password')} type="password" placeholder={tab === 'register' ? 'Min 6 characters' : '••••••••'} value={form.password} onChange={set('password')} onBlur={blur('password')} onKeyDown={(e) => e.key === 'Enter' && handleSubmit()} />
+            <label htmlFor="password" className="block text-xs font-semibold text-gray-500 mb-1.5 font-syne uppercase tracking-wider">Password</label>
+            <div className="relative">
+              <input id="password" className={`${inputClass('password')} pr-10`} type={showPassword ? 'text' : 'password'} placeholder={tab === 'register' ? 'Min 8 characters' : '••••••••'} value={form.password} onChange={set('password')} onBlur={blur('password')} onKeyDown={(e) => e.key === 'Enter' && handleSubmit()} />
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-syne font-semibold cursor-pointer bg-transparent border-0" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
             {fieldError('password') && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
           </div>
+
+          {tab === 'login' && (
+            <button type="button" className="text-xs text-saffron-600 font-syne font-semibold cursor-pointer bg-transparent border-0 mb-3 hover:text-saffron-700" onClick={() => { setShowReset(true); setResetEmail(form.email) }}>Forgot password?</button>
+          )}
 
           <button className="w-full py-3.5 bg-ink text-white border-none rounded-[10px] font-syne font-bold text-sm cursor-pointer tracking-wide hover:bg-[#222] active:scale-[0.99] transition-all disabled:bg-gray-300 disabled:cursor-not-allowed" onClick={handleSubmit} disabled={loading}>
             {loading ? 'Please wait...' : tab === 'login' ? 'Sign In →' : 'Create Account →'}

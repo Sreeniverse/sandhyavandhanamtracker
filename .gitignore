@@ -1,6 +1,8 @@
 node_modules/
 dist/
+.env
 .env.local
+.env.*.local
 .capacitor/
 .cache/
 android/app/build/
@@ -12,3 +14,4 @@ android/captures/
 *.aab
 *.jks
 *.keystore
+android/local.properties

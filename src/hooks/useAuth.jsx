@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
   const [needsMfa, setNeedsMfa] = useState(false)
   const [signupDone, setSignupDone] = useState(false)
   const [familyMembers, setFamilyMembers] = useState([])
+  const [selectedProfile, setSelectedProfile] = useState(null) // null=self, {id,name}=son
 
   const checkMfa = async () => {
     const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
@@ -22,8 +23,12 @@ export function AuthProvider({ children }) {
   }
 
   const loadFamily = useCallback(async (uid) => {
-    const { data } = await supabase.from('family_members').select('*').eq('parent_id', uid).order('name')
-    if (data) setFamilyMembers(data)
+    try {
+      const { data } = await supabase.from('family_members').select('*').eq('parent_id', uid).order('name')
+      if (data) setFamilyMembers(data)
+    } catch {
+      // Offline or network error - keep familyMembers as empty array
+    }
   }, [])
 
   useEffect(() => {
@@ -34,7 +39,10 @@ export function AuthProvider({ children }) {
           .select('name, phone')
           .eq('id', session.user.id)
           .single()
-          .then(({ data }) => {
+          .then(({ data, error }) => {
+            if (error) {
+              console.error('Failed to fetch profile:', error)
+            }
             setUser({
               id: session.user.id,
               email: session.user.email,
@@ -46,10 +54,11 @@ export function AuthProvider({ children }) {
             loadFamily(session.user.id)
             setLoading(false)
           })
+          .catch(() => setLoading(false))
       } else {
         setLoading(false)
       }
-    })
+    }).catch(() => setLoading(false))
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
@@ -74,6 +83,7 @@ export function AuthProvider({ children }) {
         setUser(null)
         setNeedsMfa(false)
         setFamilyMembers([])
+        setSelectedProfile(null)
       }
     })
 
@@ -113,7 +123,7 @@ export function AuthProvider({ children }) {
         import('@capacitor/app'),
       ])
 
-      App.addListener('appUrlOpen', async ({ url }) => {
+      const listener = await App.addListener('appUrlOpen', async ({ url }) => {
         await Browser.close()
         const hash = url.split('#')[1]
         if (hash) {
@@ -124,6 +134,7 @@ export function AuthProvider({ children }) {
             await supabase.auth.setSession({ access_token, refresh_token })
           }
         }
+        listener.remove()
       })
 
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -171,21 +182,29 @@ export function AuthProvider({ children }) {
       .delete()
       .eq('id', id)
     if (error) throw new Error(friendlyError(error))
+    if (selectedProfile?.id === id) setSelectedProfile(null)
     setFamilyMembers(prev => prev.filter(m => m.id !== id))
   }
 
   const deleteAccount = async () => {
     if (!user) throw new Error('Not authenticated')
 
-    const { error: famErr } = await supabase.from('family_members').delete().eq('parent_id', user.id)
-    if (famErr) throw new Error(friendlyError(famErr))
+    // Try server-side RPC first for atomic deletion
+    const { error: rpcErr } = await supabase.rpc('delete_user_account')
+    if (rpcErr) {
+      // Fallback: delete client-side (profile cascade should handle related data)
+      const { error: famErr } = await supabase.from('family_members').delete().eq('parent_id', user.id)
+      if (famErr) throw new Error(friendlyError(famErr))
 
-    const { error: actErr } = await supabase.from('activities').delete().eq('user_id', user.id)
-    if (actErr) throw new Error(friendlyError(actErr))
+      const { error: actErr } = await supabase.from('activities').delete().eq('user_id', user.id)
+      if (actErr) throw new Error(friendlyError(actErr))
 
-    const { error: profErr } = await supabase.from('profiles').delete().eq('id', user.id)
-    if (profErr) throw new Error(friendlyError(profErr))
+      const { error: profErr } = await supabase.from('profiles').delete().eq('id', user.id)
+      if (profErr) throw new Error(friendlyError(profErr))
+    }
 
+    // Note: the auth user record in auth.users persists unless a server-side
+    // trigger or Edge Function deletes it. The RPC above should handle this.
     const { error: authErr } = await supabase.auth.signOut()
     if (authErr) throw new Error(friendlyError(authErr))
 
@@ -199,12 +218,14 @@ export function AuthProvider({ children }) {
     setNeedsMfa(false)
     setSignupDone(false)
     setFamilyMembers([])
+    setSelectedProfile(null)
   }
 
   return (
     <AuthContext.Provider value={{
       user, loading, needsMfa, setNeedsMfa, signupDone, setSignupDone,
       familyMembers, addFamilyMember, removeFamilyMember,
+      selectedProfile, setSelectedProfile,
       signUp, signIn, signInWithGoogle, signOut, updateProfile, deleteAccount,
     }}>
       {children}

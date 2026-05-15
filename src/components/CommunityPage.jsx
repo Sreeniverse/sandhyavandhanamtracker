@@ -7,11 +7,11 @@ import { SLOTS } from '../utils/slots'
 import { friendlyError } from '../utils/errors'
 
 export default function CommunityPage() {
-  const { user } = useAuth()
+  const { user, selectedProfile } = useAuth()
   const { history } = useActivities()
   const stats = useStats(history)
 
-  const [communityStats, setCommunityStats] = useState({})
+  const [communityStats, setCommunityStats] = useState(null)
   const [leaderboard, setLeaderboard] = useState([])
   const [yourRank, setYourRank] = useState(null)
   const [yourStreak, setYourStreak] = useState(null)
@@ -76,6 +76,9 @@ export default function CommunityPage() {
         <div className="text-[0.65rem] md:text-[0.7rem] text-gray-400 uppercase tracking-widest font-syne">Community</div>
         <div className="text-xl md:text-[2rem] font-extrabold tracking-tight font-syne mt-0.5">Leaderboard</div>
         <div className="text-gray-400 text-sm mt-0.5">See how your streak compares with the community</div>
+        {selectedProfile && (
+          <div className="text-sm text-blue-600 font-semibold font-syne mt-0.5">Comparing: {selectedProfile.name}'s stats vs Community</div>
+        )}
       </div>
 
       {/* Community Slot Consistency rings */}
@@ -84,9 +87,9 @@ export default function CommunityPage() {
         <div className="flex gap-3 md:gap-8 justify-center">
           {SLOTS.map((slot) => (
             <div key={slot.key} className="text-center">
-              <div className={`ring ring-sm md:ring-lg ${slot.color}`} style={{ '--pct': `${communityStats[slot.key] || 0}%` }}>
+              <div className={`ring ring-sm md:ring-lg ${slot.color}`} style={{ '--pct': `${communityStats ? (communityStats[slot.key] || 0) : 0}%` }}>
                 <div className="ring-core">
-                  <span className="ring-inner">{(communityStats[slot.key] || 0).toFixed(0)}%</span>
+                  <span className="ring-inner">{communityStats ? (communityStats[slot.key] || 0).toFixed(0) : '-'}</span>
                 </div>
               </div>
               <div className="text-[0.55rem] md:text-[0.65rem] text-gray-400 uppercase tracking-wider font-syne mt-1">{slot.label}</div>
@@ -132,7 +135,7 @@ export default function CommunityPage() {
       {/* Your stats */}
       <div className="grid grid-cols-3 gap-1.5 md:gap-6 mt-5 md:mt-8">
         <div className="bg-white rounded-xl md:rounded-[14px] p-3 md:p-5 text-center shadow-sm bg-gradient-to-br from-cream to-white">
-          <div className="font-syne text-xl md:text-2xl font-extrabold text-saffron-600">{yourRank ? `${yourRank}${suffix(yourRank)}` : '-'}</div>
+          <div className="font-syne text-xl md:text-2xl font-extrabold text-saffron-600">{selectedProfile ? 'N/A' : yourRank ? `${yourRank}${suffix(yourRank)}` : '-'}</div>
           <div className="text-[0.52rem] md:text-[0.62rem] text-gray-400 uppercase tracking-wider font-syne mt-0.5">Rank</div>
         </div>
         <div className="bg-white rounded-xl md:rounded-[14px] p-3 md:p-5 text-center shadow-sm bg-gradient-to-br from-cream to-white">

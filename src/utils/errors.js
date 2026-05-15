@@ -31,6 +31,8 @@ export function friendlyError(err) {
   if (msg.includes('Invalid login credentials') || msg.includes('Invalid Login')) return 'Invalid email or password. Please try again.'
 
   // Fallback: don't leak raw DB messages
-  console.error('Unhandled error:', err)
+  if (import.meta.env.DEV) {
+    console.error('Unhandled error:', err)
+  }
   return 'Something went wrong. Please try again later.'
 }
