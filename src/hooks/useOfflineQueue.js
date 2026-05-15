@@ -49,9 +49,7 @@ export function useOfflineQueue(isOnline) {
               [`${item.slot}_done`]: item.value,
             },
             {
-              onConflict: item.profileFor
-                ? 'user_id,date,profile_for'
-                : 'user_id,date',
+              onConflict: 'user_id,date,profile_for_key',
             }
           )
 

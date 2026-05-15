@@ -155,7 +155,7 @@ export function useActivities() {
           [field]: value,
         },
         {
-          onConflict: profileFor ? 'user_id,date,profile_for' : 'user_id,date',
+          onConflict: 'user_id,date,profile_for_key',
         }
       )
 
