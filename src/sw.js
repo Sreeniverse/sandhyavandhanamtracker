@@ -36,10 +36,12 @@ registerRoute(
 
 // Cache Supabase API calls (reads only - GET requests)
 // NetworkFirst: prefer fresh data, fall back to cache when offline
+// NOTE: auth endpoints (/auth/v1/) are intentionally excluded - caching
+// auth responses can serve stale tokens and leak credentials.
 registerRoute(
   ({ url, request }) => {
     if (request.method !== 'GET') return false
-    return url.pathname.startsWith('/rest/v1/') || url.pathname.startsWith('/auth/v1/')
+    return url.pathname.startsWith('/rest/v1/')
   },
   new NetworkFirst({
     cacheName: 'supabase-api-cache',
