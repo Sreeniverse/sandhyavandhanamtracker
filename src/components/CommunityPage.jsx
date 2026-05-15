@@ -19,14 +19,13 @@ export default function CommunityPage() {
   const [error, setError] = useState('')
   const [retrying, setRetrying] = useState(false)
 
-  async function loadData() {
+  async function loadData(familyMode, profileName) {
     setError('')
     setLoading(true)
     try {
-      const isFamily = !!selectedProfile
       const [slotRes, leaderboardRes] = await Promise.all([
         supabase.rpc('get_community_slot_stats'),
-        supabase.rpc(isFamily ? 'get_family_leaderboard' : 'get_leaderboard'),
+        supabase.rpc(familyMode ? 'get_family_leaderboard' : 'get_leaderboard'),
       ])
 
       if (slotRes.data) {
@@ -37,8 +36,8 @@ export default function CommunityPage() {
 
       if (leaderboardRes.data) {
         setLeaderboard(leaderboardRes.data)
-        if (isFamily) {
-          const me = leaderboardRes.data.find((e) => e.user_id === user?.id && e.name === selectedProfile.name)
+        if (familyMode) {
+          const me = leaderboardRes.data.find((e) => e.user_id === user?.id && e.name === profileName)
           if (me) {
             setYourRank(Number(me.rank))
             setYourStreak(me.streak)
@@ -63,7 +62,7 @@ export default function CommunityPage() {
   }
 
   useEffect(() => {
-    loadData()
+    loadData(!!selectedProfile, selectedProfile?.name)
   }, [user?.id, selectedProfile?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
@@ -77,7 +76,7 @@ export default function CommunityPage() {
           <span>{error}</span>
           <button
             className="ml-3 px-3 py-1 bg-amber-100 border border-amber-300 rounded-[8px] font-syne font-bold text-xs cursor-pointer hover:bg-amber-200 transition-colors disabled:opacity-50"
-            onClick={() => { setRetrying(true); loadData() }}
+            onClick={() => { setRetrying(true); loadData(!!selectedProfile, selectedProfile?.name) }}
             disabled={retrying}
           >
             {retrying ? 'Retrying...' : 'Retry'}
