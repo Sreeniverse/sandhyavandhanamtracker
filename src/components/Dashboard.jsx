@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useActivities } from '../hooks/useActivities'
 import { useStats } from '../hooks/useStats'
@@ -25,9 +26,10 @@ function ConsistencyRings({ stats }) {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth()
+  const { user, familyMembers } = useAuth()
   const { today, history, loading, error, logAction, selectedDate, navigateDate, goToToday, isToday, isPastDate, canGoBack, canGoForward } = useActivities()
   const stats = useStats(history)
+  const [selectingFor, setSelectingFor] = useState(null)
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[60vh]"><div className="w-7 h-7 border-3 border-warm border-t-saffron-600 rounded-full animate-spin" /></div>
@@ -105,11 +107,15 @@ export default function Dashboard() {
                 className={`w-full py-3 mt-auto rounded-[10px] font-syne text-xs md:text-sm font-bold cursor-pointer tracking-wide border-1.5 transition-all ${done ? 'bg-transparent text-success border-success hover:bg-green-50' : 'bg-ink text-white border-ink hover:bg-[#222]'}`}
                 onClick={async () => {
                   const action = done ? 'undone' : 'done'
-                  await logAction(slot.key, action)
-                  if (action === 'done') {
-                    await cancelSlotReminder(slot.key)
+                  if (familyMembers.length > 0) {
+                    setSelectingFor({ slot: slot.key, action })
                   } else {
-                    await scheduleAllReminders()
+                    await logAction(slot.key, action)
+                    if (action === 'done') {
+                      await cancelSlotReminder(slot.key)
+                    } else {
+                      await scheduleAllReminders()
+                    }
                   }
                 }}
               >
@@ -144,6 +150,50 @@ export default function Dashboard() {
                 })}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {selectingFor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectingFor(null)}>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold font-syne text-ink mb-1">Who completed this ritual?</h3>
+            <p className="text-sm text-gray-400 mb-4">{SLOTS.find(s => s.key === selectingFor.slot)?.label} Sandhyavandhanam</p>
+            <div className="flex flex-col gap-2">
+              <button
+                className="w-full py-3 bg-ink text-white rounded-[10px] font-syne font-bold text-sm cursor-pointer hover:bg-[#222] transition-colors"
+                onClick={async () => {
+                  const { slot, action } = selectingFor
+                  setSelectingFor(null)
+                  await logAction(slot, action)
+                  if (action === 'done') await cancelSlotReminder(slot)
+                  else await scheduleAllReminders()
+                }}
+              >
+                Me
+              </button>
+              {familyMembers.map(m => (
+                <button
+                  key={m.id}
+                  className="w-full py-3 bg-saffron-50 text-saffron-800 border border-saffron-200 rounded-[10px] font-syne font-bold text-sm cursor-pointer hover:bg-saffron-100 transition-colors"
+                  onClick={async () => {
+                    const { slot, action } = selectingFor
+                    setSelectingFor(null)
+                    await logAction(slot, action, m.id)
+                    if (action === 'done') await cancelSlotReminder(slot)
+                    else await scheduleAllReminders()
+                  }}
+                >
+                  {m.name}
+                </button>
+              ))}
+              <button
+                className="w-full py-2.5 text-gray-400 bg-transparent font-syne font-semibold text-sm cursor-pointer hover:text-ink transition-colors mt-1"
+                onClick={() => setSelectingFor(null)}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -16,37 +16,42 @@ export default function CommunityPage() {
   const [yourStreak, setYourStreak] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [retrying, setRetrying] = useState(false)
+
+  async function loadData() {
+    setError('')
+    setLoading(true)
+    try {
+      const [slotRes, leaderboardRes] = await Promise.all([
+        supabase.rpc('get_community_slot_stats'),
+        supabase.rpc('get_leaderboard'),
+      ])
+
+      if (slotRes.data) {
+        const bySlot = {}
+        slotRes.data.forEach(({ slot, pct }) => { bySlot[slot] = pct })
+        setCommunityStats(bySlot)
+      }
+
+      if (leaderboardRes.data) {
+        setLeaderboard(leaderboardRes.data)
+        const me = leaderboardRes.data.find((e) => e.user_id === user?.id)
+        if (me) {
+          setYourRank(Number(me.rank))
+          setYourStreak(me.streak)
+        }
+      }
+    } catch (_) {
+      setError('Community features are temporarily unavailable. Please try again later.')
+    } finally {
+      setLoading(false)
+      setRetrying(false)
+    }
+  }
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [slotRes, leaderboardRes] = await Promise.all([
-          supabase.rpc('get_community_slot_stats'),
-          supabase.rpc('get_leaderboard'),
-        ])
-
-        if (slotRes.data) {
-          const bySlot = {}
-          slotRes.data.forEach(({ slot, pct }) => { bySlot[slot] = pct })
-          setCommunityStats(bySlot)
-        }
-
-        if (leaderboardRes.data) {
-          setLeaderboard(leaderboardRes.data)
-          const me = leaderboardRes.data.find((e) => e.user_id === user?.id)
-          if (me) {
-            setYourRank(Number(me.rank))
-            setYourStreak(me.streak)
-          }
-        }
-      } catch (_) {
-        setError('Community features are temporarily unavailable. Please try again later.')
-      } finally {
-        setLoading(false)
-      }
-    }
     loadData()
-  }, [user?.id])
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[60vh]"><div className="w-7 h-7 border-3 border-warm border-t-saffron-600 rounded-full animate-spin" /></div>
@@ -55,7 +60,16 @@ export default function CommunityPage() {
   return (
     <div className="max-w-[900px] mx-auto px-4 md:px-6 py-6 md:py-10">
       {error && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-[10px] text-sm mb-4">{error}</div>
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-[10px] text-sm mb-4 flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            className="ml-3 px-3 py-1 bg-amber-100 border border-amber-300 rounded-[8px] font-syne font-bold text-xs cursor-pointer hover:bg-amber-200 transition-colors disabled:opacity-50"
+            onClick={() => { setRetrying(true); loadData() }}
+            disabled={retrying}
+          >
+            {retrying ? 'Retrying...' : 'Retry'}
+          </button>
+        </div>
       )}
       <div className="mb-5 md:mb-8">
         <div className="text-[0.65rem] md:text-[0.7rem] text-gray-400 uppercase tracking-widest font-syne">Community</div>

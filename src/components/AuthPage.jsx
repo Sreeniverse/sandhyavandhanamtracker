@@ -20,7 +20,7 @@ function validate(form, tab) {
 }
 
 export default function AuthPage() {
-  const { signIn, signUp, signInWithGoogle } = useAuth()
+  const { signIn, signUp, signInWithGoogle, signupDone, setSignupDone } = useAuth()
   const [tab, setTab] = useState('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -115,6 +115,24 @@ export default function AuthPage() {
           <img src="/logo.png" alt="Asthika Samaj" className="h-10" />
         </div>
         <div className="max-w-[380px] mx-auto w-full">
+          {signupDone ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 rounded-full bg-saffron-100 flex items-center justify-center mx-auto mb-4">
+                <span className="text-3xl">📧</span>
+              </div>
+              <h2 className="text-xl font-extrabold font-syne tracking-tight mb-2">Check Your Email</h2>
+              <p className="text-sm text-gray-400 mb-1">We sent a verification link to</p>
+              <p className="text-sm font-semibold text-ink mb-5">{form.email}</p>
+              <p className="text-xs text-gray-400 mb-6">Click the link in the email to verify your account, then sign in. If you don't see it, check your spam folder.</p>
+              <button
+                className="px-6 py-2.5 bg-ink text-white rounded-[10px] font-syne font-bold text-sm cursor-pointer hover:bg-[#222] transition-colors"
+                onClick={() => { setSignupDone(false); setTab('login'); setForm({ name: '', email: '', password: '' }); setError('') }}
+              >
+                Back to Sign In
+              </button>
+            </div>
+          ) : (
+            <>
           <div className="flex bg-cream rounded-[10px] p-1 mb-6">
             <button className={`flex-1 py-2.5 rounded-lg font-syne font-semibold text-sm cursor-pointer transition-all ${tab === 'login' ? 'bg-white text-ink shadow-sm' : 'text-gray-400 bg-transparent'}`} onClick={() => { setTab('login'); setError(''); setTouched({}) }}>Sign In</button>
             <button className={`flex-1 py-2.5 rounded-lg font-syne font-semibold text-sm cursor-pointer transition-all ${tab === 'register' ? 'bg-white text-ink shadow-sm' : 'text-gray-400 bg-transparent'}`} onClick={() => { setTab('register'); setError(''); setTouched({}) }}>Create Account</button>
@@ -160,6 +178,8 @@ export default function AuthPage() {
           <button className="w-full py-3.5 bg-ink text-white border-none rounded-[10px] font-syne font-bold text-sm cursor-pointer tracking-wide hover:bg-[#222] active:scale-[0.99] transition-all disabled:bg-gray-300 disabled:cursor-not-allowed" onClick={handleSubmit} disabled={loading}>
             {loading ? 'Please wait...' : tab === 'login' ? 'Sign In →' : 'Create Account →'}
           </button>
+            </>
+          )}
         </div>
       </div>
     </div>

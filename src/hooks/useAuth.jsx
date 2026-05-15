@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react'
+import { useState, useEffect, createContext, useContext, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { isNative } from '../utils/notifications'
 
@@ -8,16 +8,8 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [needsMfa, setNeedsMfa] = useState(false)
-
-  const buildUser = (session) => {
-    if (!session?.user) return null
-    return {
-      id: session.user.id,
-      email: session.user.email,
-      name: session.user.user_metadata?.name || session.user.email?.split('@')[0],
-      phone: session.user.user_metadata?.phone || '',
-    }
-  }
+  const [signupDone, setSignupDone] = useState(false)
+  const [familyMembers, setFamilyMembers] = useState([])
 
   const checkMfa = async () => {
     const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
@@ -27,6 +19,11 @@ export function AuthProvider({ children }) {
       setNeedsMfa(false)
     }
   }
+
+  const loadFamily = useCallback(async (uid) => {
+    const { data } = await supabase.from('family_members').select('*').eq('parent_id', uid).order('name')
+    if (data) setFamilyMembers(data)
+  }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -42,8 +39,10 @@ export function AuthProvider({ children }) {
               email: session.user.email,
               name: data?.name || session.user.user_metadata?.name || session.user.email?.split('@')[0],
               phone: data?.phone || '',
+              emailVerified: session.user.email_confirmed_at != null || session.user.app_metadata?.provider === 'google',
             })
             checkMfa()
+            loadFamily(session.user.id)
             setLoading(false)
           })
       } else {
@@ -53,7 +52,13 @@ export function AuthProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        const u = buildUser(session)
+        const u = {
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.name || session.user.email?.split('@')[0],
+          phone: session.user.user_metadata?.phone || '',
+          emailVerified: session.user.email_confirmed_at != null || session.user.app_metadata?.provider === 'google',
+        }
         supabase
           .from('profiles')
           .select('name, phone')
@@ -63,22 +68,32 @@ export function AuthProvider({ children }) {
             setUser({ ...u, name: data?.name || u.name, phone: data?.phone || u.phone })
           })
         checkMfa()
+        loadFamily(session.user.id)
       } else {
         setUser(null)
         setNeedsMfa(false)
+        setFamilyMembers([])
       }
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [loadFamily])
 
   const signUp = async (email, password, name) => {
+    const redirectTo = isNative()
+      ? 'com.asthikasamaj.sandhyavandhanam://auth'
+      : window.location.origin + '/auth'
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name } },
+      options: {
+        data: { name },
+        emailRedirectTo: redirectTo,
+      },
     })
     if (error) throw error
+    setSignupDone(true)
   }
 
   const signIn = async (email, password) => {
@@ -137,22 +152,60 @@ export function AuthProvider({ children }) {
     setUser({ ...user, name: updates.name, phone: updates.phone })
   }
 
+  const addFamilyMember = async (name) => {
+    if (!user || !name.trim()) return
+    const { data, error } = await supabase
+      .from('family_members')
+      .insert({ parent_id: user.id, name: name.trim() })
+      .select()
+      .single()
+    if (error) throw error
+    setFamilyMembers(prev => [...prev, data])
+    return data
+  }
+
+  const removeFamilyMember = async (id) => {
+    const { error } = await supabase
+      .from('family_members')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+    setFamilyMembers(prev => prev.filter(m => m.id !== id))
+  }
+
   const deleteAccount = async () => {
     if (!user) throw new Error('Not authenticated')
-    await supabase.from('activities').delete().eq('user_id', user.id)
-    await supabase.from('profiles').delete().eq('id', user.id)
-    await supabase.auth.signOut()
+
+    const { error: famErr } = await supabase.from('family_members').delete().eq('parent_id', user.id)
+    if (famErr) throw new Error('Failed to delete family data: ' + famErr.message)
+
+    const { error: actErr } = await supabase.from('activities').delete().eq('user_id', user.id)
+    if (actErr) throw new Error('Failed to delete activity data: ' + actErr.message)
+
+    const { error: profErr } = await supabase.from('profiles').delete().eq('id', user.id)
+    if (profErr) throw new Error('Failed to delete profile: ' + profErr.message)
+
+    const { error: authErr } = await supabase.auth.signOut()
+    if (authErr) throw new Error('Failed to sign out: ' + authErr.message)
+
     setUser(null)
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut()
+    if (error) throw new Error('Failed to sign out: ' + error.message)
     setUser(null)
     setNeedsMfa(false)
+    setSignupDone(false)
+    setFamilyMembers([])
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, needsMfa, setNeedsMfa, signUp, signIn, signInWithGoogle, signOut, updateProfile, deleteAccount }}>
+    <AuthContext.Provider value={{
+      user, loading, needsMfa, setNeedsMfa, signupDone, setSignupDone,
+      familyMembers, addFamilyMember, removeFamilyMember,
+      signUp, signIn, signInWithGoogle, signOut, updateProfile, deleteAccount,
+    }}>
       {children}
     </AuthContext.Provider>
   )

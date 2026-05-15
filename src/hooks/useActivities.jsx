@@ -69,6 +69,7 @@ export function useActivities() {
   useEffect(() => {
     if (!user) return
     setLoading(true)
+    setError('')
     Promise.all([fetchDay(selectedDate), fetchHistory()]).then(([dayData, historyData]) => {
       setToday(dayData)
       setHistory(historyData)
@@ -76,7 +77,7 @@ export function useActivities() {
     })
   }, [user, selectedDate]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const logAction = async (slot, action) => {
+  const logAction = async (slot, action, profileFor = null) => {
     const field = `${slot}_done`
     const gaayatriField = `${slot}_gaayatri`
 
@@ -93,14 +94,35 @@ export function useActivities() {
       update = { [gaayatriField]: Math.max(0, current - 1) }
     }
 
-    const { error } = await supabase
-      .from('activities')
-      .upsert({
-        user_id: user.id,
-        date: selectedDate,
-        ...update,
-      }, { onConflict: 'user_id,date' })
+    const payload = {
+      user_id: user.id,
+      date: selectedDate,
+      profile_for: profileFor,
+      ...update,
+    }
 
+    let query = supabase.from('activities')
+    if (profileFor) {
+      // Family member activity: find existing or insert
+      const { data: existing } = await supabase
+        .from('activities')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('date', selectedDate)
+        .eq('profile_for', profileFor)
+        .maybeSingle()
+
+      if (existing) {
+        query = supabase.from('activities').update(update).eq('id', existing.id)
+      } else {
+        query = supabase.from('activities').insert(payload)
+      }
+    } else {
+      // Self activity
+      query = supabase.from('activities').upsert(payload, { onConflict: 'user_id,date', ignoreDuplicates: false })
+    }
+
+    const { error } = await query
     if (error) {
       setError('Failed to save your entry. Please try again.')
       return

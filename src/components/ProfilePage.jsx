@@ -9,7 +9,7 @@ import { MfaEnroll } from './MfaVerify'
 import pkg from '../../package.json'
 
 export default function ProfilePage() {
-  const { user, updateProfile, deleteAccount } = useAuth()
+  const { user, updateProfile, deleteAccount, familyMembers, addFamilyMember, removeFamilyMember } = useAuth()
   const { history } = useActivities()
   const stats = useStats(history)
   const { enabled: notifEnabled, loading: notifLoading, error: notifError, supported: notifSupported, toggle: toggleNotif } = useNotifications(user)
@@ -22,6 +22,10 @@ export default function ProfilePage() {
   const [mfaEnrolled, setMfaEnrolled] = useState(false)
   const [mfaLoading, setMfaLoading] = useState(true)
   const [showEnroll, setShowEnroll] = useState(false)
+  const [newChildName, setNewChildName] = useState('')
+  const [addingChild, setAddingChild] = useState(false)
+  const [familyError, setFamilyError] = useState('')
+  const [mfaError, setMfaError] = useState('')
 
   useEffect(() => {
     supabase.auth.mfa.listFactors().then(({ data }) => {
@@ -56,12 +60,17 @@ export default function ProfilePage() {
   }
 
   const handleUnenrollMfa = async () => {
-    const { data } = await supabase.auth.mfa.listFactors()
-    const totpFactor = data?.totp?.find(f => f.status === 'verified')
-    if (totpFactor) {
-      await supabase.auth.mfa.unenroll({ factorId: totpFactor.id })
-      await supabase.auth.refreshSession()
-      setMfaEnrolled(false)
+    setMfaError('')
+    try {
+      const { data } = await supabase.auth.mfa.listFactors()
+      const totpFactor = data?.totp?.find(f => f.status === 'verified')
+      if (totpFactor) {
+        await supabase.auth.mfa.unenroll({ factorId: totpFactor.id })
+        await supabase.auth.refreshSession()
+        setMfaEnrolled(false)
+      }
+    } catch (err) {
+      setMfaError(err.message || 'Failed to disable 2FA. Please try again.')
     }
   }
 
@@ -120,10 +129,50 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Family */}
+        <div className="bg-white rounded-2xl md:rounded-[16px] shadow-md overflow-hidden">
+          <div className="text-[0.75rem] md:text-xs uppercase tracking-widest text-gray-400 font-syne font-semibold p-4 md:px-6 py-3 bg-cream">Family Members</div>
+          <div className="p-4 md:p-6">
+            {familyError && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-[10px] text-xs mb-3">{familyError}</div>}
+            <p className="text-xs text-gray-400 mb-4">Add your sons to track their Sandhyavandhanam. Switch between profiles on the Dashboard when marking rituals.</p>
+            {familyMembers.length > 0 && (
+              <div className="flex flex-col gap-1.5 mb-4">
+                {familyMembers.map(m => (
+                  <div key={m.id} className="flex items-center justify-between bg-cream rounded-[10px] px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-saffron-200 flex items-center justify-center text-saffron-700 font-syne font-bold text-[0.65rem]">{m.name[0]}</div>
+                      <span className="text-sm font-semibold">{m.name}</span>
+                    </div>
+                    <button onClick={async () => { setFamilyError(''); try { await removeFamilyMember(m.id) } catch (err) { setFamilyError(err.message || 'Failed to remove family member.') }}} className="text-xs text-red-500 font-syne font-semibold cursor-pointer hover:text-red-700 bg-transparent border-0">Remove</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input
+                className="flex-1 px-3 py-2 border border-warm rounded-[10px] bg-white font-dm text-sm outline-none focus:border-saffron-500"
+                type="text"
+                placeholder="Son's name"
+                value={newChildName}
+                onChange={e => setNewChildName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && newChildName.trim()) { setAddingChild(true); setFamilyError(''); addFamilyMember(newChildName).then(() => { setNewChildName(''); setAddingChild(false) }).catch(err => { setFamilyError(err.message || 'Failed to add family member.'); setAddingChild(false) }) }}}
+              />
+              <button
+                className="px-4 py-2 bg-ink text-white rounded-[10px] font-syne font-bold text-xs cursor-pointer hover:bg-[#222] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap"
+                onClick={async () => { if (!newChildName.trim()) return; setAddingChild(true); setFamilyError(''); try { await addFamilyMember(newChildName); setNewChildName('') } catch (err) { setFamilyError(err.message || 'Failed to add family member.') } finally { setAddingChild(false) }}}
+                disabled={addingChild || !newChildName.trim()}
+              >
+                {addingChild ? '...' : '+ Add Son'}
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Security - 2FA */}
         <div className="bg-white rounded-2xl md:rounded-[16px] shadow-md overflow-hidden">
           <div className="text-[0.75rem] md:text-xs uppercase tracking-widest text-gray-400 font-syne font-semibold p-4 md:px-6 py-3 bg-cream">Security</div>
           <div className="p-4 md:p-6">
+            {mfaError && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-[10px] text-xs mb-3">{mfaError}</div>}
             {!mfaLoading && (
               mfaEnrolled ? (
                 <div>
