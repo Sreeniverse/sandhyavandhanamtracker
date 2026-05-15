@@ -23,9 +23,10 @@ export default function CommunityPage() {
     setError('')
     setLoading(true)
     try {
+      const isFamily = !!selectedProfile
       const [slotRes, leaderboardRes] = await Promise.all([
         supabase.rpc('get_community_slot_stats'),
-        supabase.rpc('get_leaderboard'),
+        supabase.rpc(isFamily ? 'get_family_leaderboard' : 'get_leaderboard'),
       ])
 
       if (slotRes.data) {
@@ -36,10 +37,21 @@ export default function CommunityPage() {
 
       if (leaderboardRes.data) {
         setLeaderboard(leaderboardRes.data)
-        const me = leaderboardRes.data.find((e) => e.user_id === user?.id)
-        if (me) {
-          setYourRank(Number(me.rank))
-          setYourStreak(me.streak)
+        if (isFamily) {
+          const me = leaderboardRes.data.find((e) => e.user_id === user?.id && e.name === selectedProfile.name)
+          if (me) {
+            setYourRank(Number(me.rank))
+            setYourStreak(me.streak)
+          } else {
+            setYourRank(null)
+            setYourStreak(null)
+          }
+        } else {
+          const me = leaderboardRes.data.find((e) => e.user_id === user?.id)
+          if (me) {
+            setYourRank(Number(me.rank))
+            setYourStreak(me.streak)
+          }
         }
       }
     } catch (err) {
@@ -52,7 +64,7 @@ export default function CommunityPage() {
 
   useEffect(() => {
     loadData()
-  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, selectedProfile?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[60vh]"><div className="w-7 h-7 border-3 border-warm border-t-saffron-600 rounded-full animate-spin" /></div>
@@ -75,10 +87,7 @@ export default function CommunityPage() {
       <div className="mb-5 md:mb-8">
         <div className="text-[0.65rem] md:text-[0.7rem] text-gray-400 uppercase tracking-widest font-syne">Community</div>
         <div className="text-xl md:text-[2rem] font-extrabold tracking-tight font-syne mt-0.5">Leaderboard</div>
-        <div className="text-gray-400 text-sm mt-0.5">See how your streak compares with the community</div>
-        {selectedProfile && (
-          <div className="text-sm text-blue-600 font-semibold font-syne mt-0.5">Comparing: {selectedProfile.name}'s stats vs Community</div>
-        )}
+        <div className="text-gray-400 text-sm mt-0.5">{selectedProfile ? `See how ${selectedProfile.name} compares with other family members` : 'See how your streak compares with the community'}</div>
       </div>
 
       {/* Community Slot Consistency rings */}
@@ -100,42 +109,56 @@ export default function CommunityPage() {
 
       {/* Leaderboard list - Desktop table */}
       <div className="hidden md:block bg-white rounded-[16px] shadow-md overflow-hidden">
-        <div className="grid grid-cols-[60px_1fr_120px_120px] gap-4 px-6 py-2.5 bg-cream font-syne text-[0.62rem] uppercase tracking-wider text-gray-400">
-          <span>Rank</span><span>Name</span><span className="text-center">Streak</span><span className="text-center">Completion</span>
+        <div className={`grid gap-4 px-6 py-2.5 bg-cream font-syne text-[0.62rem] uppercase tracking-wider text-gray-400 ${selectedProfile ? 'grid-cols-[60px_1fr_1fr_120px_120px]' : 'grid-cols-[60px_1fr_120px_120px]'}`}>
+          <span>Rank</span><span>Name</span>{selectedProfile && <span>Parent</span>}<span className="text-center">Streak</span><span className="text-center">Completion</span>
         </div>
         {leaderboard.length === 0 && (
-          <div className="px-6 py-8 text-center text-gray-400 text-sm">No community data yet. Start tracking to appear on the leaderboard!</div>
+          <div className="px-6 py-8 text-center text-gray-400 text-sm">{selectedProfile ? 'No family data yet. Track rituals for family members to see them here!' : 'No community data yet. Start tracking to appear on the leaderboard!'}</div>
         )}
-        {leaderboard.map((entry) => (
-          <div key={entry.user_id} className={`grid grid-cols-[60px_1fr_120px_120px] gap-4 px-6 py-2.5 border-b border-black/[0.03] items-center hover:bg-saffron-50/30 transition-colors ${entry.user_id === user?.id ? 'bg-saffron-50' : ''}`}>
-            <div className={`font-syne font-bold text-sm ${Number(entry.rank) <= 3 ? 'text-gold' : 'text-gray-400'}`}>{entry.rank}</div>
-            <div className="font-bold text-sm">{entry.name} {entry.user_id === user?.id && <span className="bg-saffron-500 text-white px-2 py-0.5 rounded-full text-[0.52rem] font-bold font-syne uppercase tracking-wider ml-1">You</span>}</div>
-            <div className="font-syne font-extrabold text-sm text-center">{entry.streak} <span className="text-xs text-gray-300 font-normal">days</span></div>
-            <div className="font-syne font-bold text-sm text-saffron-600 text-center">{entry.completion}%</div>
-          </div>
-        ))}
+        {leaderboard.map((entry) => {
+          const isMe = selectedProfile
+            ? entry.user_id === user?.id && entry.name === selectedProfile.name
+            : entry.user_id === user?.id
+          return (
+            <div key={`${entry.user_id}-${entry.name}`} className={`grid gap-4 px-6 py-2.5 border-b border-black/[0.03] items-center hover:bg-saffron-50/30 transition-colors ${selectedProfile ? 'grid-cols-[60px_1fr_1fr_120px_120px]' : 'grid-cols-[60px_1fr_120px_120px]'} ${isMe ? 'bg-saffron-50' : ''}`}>
+              <div className={`font-syne font-bold text-sm ${Number(entry.rank) <= 3 ? 'text-gold' : 'text-gray-400'}`}>{entry.rank}</div>
+              <div className="font-bold text-sm">{entry.name} {isMe && <span className="bg-saffron-500 text-white px-2 py-0.5 rounded-full text-[0.52rem] font-bold font-syne uppercase tracking-wider ml-1">You</span>}</div>
+              {selectedProfile && <div className="text-sm text-gray-400">{entry.parent_name}</div>}
+              <div className="font-syne font-extrabold text-sm text-center">{entry.streak} <span className="text-xs text-gray-300 font-normal">days</span></div>
+              <div className="font-syne font-bold text-sm text-saffron-600 text-center">{entry.completion}%</div>
+            </div>
+          )
+        })}
       </div>
 
       {/* Leaderboard list - Mobile cards */}
       <div className="md:hidden">
         <div className="font-syne text-[0.65rem] uppercase tracking-wider text-gray-400 mb-2">All Rankings</div>
         {leaderboard.length === 0 && (
-          <div className="bg-white rounded-xl p-4 text-center text-gray-400 text-sm">No community data yet.</div>
+          <div className="bg-white rounded-xl p-4 text-center text-gray-400 text-sm">{selectedProfile ? 'No family data yet.' : 'No community data yet.'}</div>
         )}
-        {leaderboard.map((entry) => (
-          <div key={entry.user_id} className={`bg-white rounded-xl p-2.5 px-3 flex items-center gap-2 shadow-sm mb-1 ${entry.user_id === user?.id ? 'bg-saffron-50' : ''}`}>
-            <div className={`font-syne font-bold text-xs w-6 text-center ${Number(entry.rank) <= 3 ? 'text-gold' : 'text-gray-400'}`}>{entry.rank}</div>
-            <div className="font-bold text-sm flex-1">{entry.name} {entry.user_id === user?.id && <span className="bg-saffron-500 text-white px-1.5 py-0.5 rounded-full text-[0.52rem] font-bold font-syne uppercase tracking-wider ml-1">You</span>}</div>
-            <div className="font-syne font-extrabold text-xs text-center min-w-[48px]">{entry.streak} d</div>
-            <div className="font-syne font-bold text-xs text-saffron-600 text-center min-w-[40px]">{entry.completion}%</div>
-          </div>
-        ))}
+        {leaderboard.map((entry) => {
+          const isMe = selectedProfile
+            ? entry.user_id === user?.id && entry.name === selectedProfile.name
+            : entry.user_id === user?.id
+          return (
+            <div key={`${entry.user_id}-${entry.name}`} className={`bg-white rounded-xl p-2.5 px-3 flex items-center gap-2 shadow-sm mb-1 ${isMe ? 'bg-saffron-50' : ''}`}>
+              <div className={`font-syne font-bold text-xs w-6 text-center ${Number(entry.rank) <= 3 ? 'text-gold' : 'text-gray-400'}`}>{entry.rank}</div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-sm truncate">{entry.name} {isMe && <span className="bg-saffron-500 text-white px-1.5 py-0.5 rounded-full text-[0.52rem] font-bold font-syne uppercase tracking-wider ml-1">You</span>}</div>
+                {selectedProfile && entry.parent_name && <div className="text-[0.6rem] text-gray-400 truncate">{entry.parent_name}</div>}
+              </div>
+              <div className="font-syne font-extrabold text-xs text-center min-w-[48px]">{entry.streak} d</div>
+              <div className="font-syne font-bold text-xs text-saffron-600 text-center min-w-[40px]">{entry.completion}%</div>
+            </div>
+          )
+        })}
       </div>
 
       {/* Your stats */}
       <div className="grid grid-cols-3 gap-1.5 md:gap-6 mt-5 md:mt-8">
         <div className="bg-white rounded-xl md:rounded-[14px] p-3 md:p-5 text-center shadow-sm bg-gradient-to-br from-cream to-white">
-          <div className="font-syne text-xl md:text-2xl font-extrabold text-saffron-600">{selectedProfile ? 'N/A' : yourRank ? `${yourRank}${suffix(yourRank)}` : '-'}</div>
+          <div className="font-syne text-xl md:text-2xl font-extrabold text-saffron-600">{yourRank ? `${yourRank}${suffix(yourRank)}` : '-'}</div>
           <div className="text-[0.52rem] md:text-[0.62rem] text-gray-400 uppercase tracking-wider font-syne mt-0.5">Rank</div>
         </div>
         <div className="bg-white rounded-xl md:rounded-[14px] p-3 md:p-5 text-center shadow-sm bg-gradient-to-br from-cream to-white">
