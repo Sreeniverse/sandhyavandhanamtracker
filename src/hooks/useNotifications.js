@@ -76,16 +76,18 @@ export function useNotifications(user) {
       return
     }
 
-    if (Notification.permission === 'denied') {
-      setError('Notifications are blocked. Enable them in your browser settings.')
-      return
-    }
-
-    if (Notification.permission === 'default') {
-      const result = await Notification.requestPermission()
-      if (result !== 'granted') {
-        setError('Notification permission was denied.')
+    if (!isNative()) {
+      if (Notification.permission === 'denied') {
+        setError('Notifications are blocked. Enable them in your browser settings.')
         return
+      }
+
+      if (Notification.permission === 'default') {
+        const result = await Notification.requestPermission()
+        if (result !== 'granted') {
+          setError('Notification permission was denied.')
+          return
+        }
       }
     }
 
