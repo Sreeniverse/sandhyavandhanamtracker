@@ -59,17 +59,19 @@ async function deleteWebPushSubscription(userId) {
   }
 }
 
-async function savePref(userId, val) {
+async function savePref(userId, pushVal, emailVal) {
   const { error } = await supabase
     .from('notification_preferences')
-    .upsert({ user_id: userId, enabled: val }, { onConflict: 'user_id' })
+    .upsert({ user_id: userId, enabled: pushVal, email_enabled: emailVal }, { onConflict: 'user_id' })
   return error
 }
 
 export function useNotifications(user) {
   const [enabled, setEnabled] = useState(false)
+  const [emailEnabled, setEmailEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [emailError, setEmailError] = useState('')
   const native = isNative()
 
   useEffect(() => {
@@ -79,17 +81,17 @@ export function useNotifications(user) {
     }
     supabase
       .from('notification_preferences')
-      .select('enabled')
+      .select('enabled, email_enabled')
       .eq('user_id', user.id)
       .maybeSingle()
       .then(({ data }) => {
         setEnabled(data?.enabled ?? false)
+        setEmailEnabled(data?.email_enabled ?? false)
         setLoading(false)
       })
   }, [user])
 
   // Reschedule local notifications on mount if enabled on native
-  // Handles cases where Android cleared scheduled notifications (reboot, app update)
   useEffect(() => {
     if (!native || !enabled) return
     scheduleAllReminders().catch(err => console.error('Reschedule failed:', err))
@@ -100,7 +102,7 @@ export function useNotifications(user) {
     const next = !enabled
 
     if (next) {
-      // Enabling notifications
+      // Enabling push notifications
       if (native) {
         const hasPermission = await checkPermission()
         if (!hasPermission) {
@@ -125,7 +127,7 @@ export function useNotifications(user) {
         }
       }
     } else {
-      // Disabling notifications
+      // Disabling push notifications
       if (native) {
         cancelAllReminders()
       } else {
@@ -133,7 +135,7 @@ export function useNotifications(user) {
       }
     }
 
-    const saveError = await savePref(user.id, next)
+    const saveError = await savePref(user.id, next, emailEnabled)
     if (saveError) {
       setError(friendlyError(saveError))
       return
@@ -148,9 +150,22 @@ export function useNotifications(user) {
         await setupWebPush(user.id)
       }
     }
-  }, [user, native, enabled])
+  }, [user, native, enabled, emailEnabled])
+
+  const toggleEmail = useCallback(async () => {
+    setEmailError('')
+    const next = !emailEnabled
+
+    const saveError = await savePref(user.id, enabled, next)
+    if (saveError) {
+      setEmailError(friendlyError(saveError))
+      return
+    }
+
+    setEmailEnabled(next)
+  }, [user, enabled, emailEnabled])
 
   const supported = native || isPushSupported()
 
-  return { enabled, loading, error, supported, toggle }
+  return { enabled, loading, error, supported, toggle, emailEnabled, emailError, toggleEmail }
 }
