@@ -10,6 +10,7 @@ import { friendlyError } from '../utils/errors'
 
 export default function ProfilePage() {
   const { user, updateProfile, deleteAccount, familyMembers, addFamilyMember, removeFamilyMember, selectedProfile } = useAuth()
+  const isSSO = user?.isSSO
   const { history } = useActivities()
   const stats = useStats(history)
   const { enabled: notifEnabled, loading: notifLoading, error: notifError, supported: notifSupported, toggle: toggleNotif, emailEnabled, emailError, toggleEmail } = useNotifications(user)
@@ -30,6 +31,13 @@ export default function ProfilePage() {
   const [mfaError, setMfaError] = useState('')
   const [removeConfirm, setRemoveConfirm] = useState(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [showPasswordForm, setShowPasswordForm] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
 
   useEffect(() => {
     supabase.auth.mfa.listFactors().then(({ data }) => {
@@ -77,6 +85,34 @@ export default function ProfilePage() {
       }
     } catch (err) {
       setMfaError(friendlyError(err))
+    }
+  }
+
+  const handleChangePassword = async () => {
+    setPasswordError('')
+    setPasswordSuccess(false)
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match')
+      return
+    }
+    setPasswordSaving(true)
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) throw error
+      setPasswordSuccess(true)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setShowPasswordForm(false)
+      setTimeout(() => setPasswordSuccess(false), 3000)
+    } catch (err) {
+      setPasswordError(friendlyError(err))
+    } finally {
+      setPasswordSaving(false)
     }
   }
 
@@ -213,6 +249,37 @@ export default function ProfilePage() {
                   <button onClick={() => setShowEnroll(true)} className="px-5 py-2.5 bg-ink text-white border-none rounded-full font-syne font-bold text-sm cursor-pointer tracking-wide hover:bg-[#222] transition-colors">Enable 2FA</button>
                 </div>
               )
+            )}
+            {!isSSO && (
+              <>
+                <div className="border-t border-warm my-4" />
+                {showPasswordForm ? (
+                  <div>
+                    <div className="text-sm font-semibold mb-3">Change Password</div>
+                    {passwordError && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-[10px] text-xs mb-3">{passwordError}</div>}
+                    <div className="mb-3">
+                      <label className="block text-xs font-semibold text-gray-500 mb-1 font-syne uppercase tracking-wider">New Password</label>
+                      <input className="w-full px-3 py-2.5 border border-warm rounded-[10px] bg-white font-dm text-sm text-ink outline-none focus:border-saffron-500" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="At least 6 characters" />
+                    </div>
+                    <div className="mb-3">
+                      <label className="block text-xs font-semibold text-gray-500 mb-1 font-syne uppercase tracking-wider">Confirm New Password</label>
+                      <input className="w-full px-3 py-2.5 border border-warm rounded-[10px] bg-white font-dm text-sm text-ink outline-none focus:border-saffron-500" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Re-enter new password" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button onClick={handleChangePassword} disabled={passwordSaving} className="px-6 py-2.5 bg-ink text-white border-none rounded-full font-syne font-bold text-sm cursor-pointer tracking-wide hover:bg-[#222] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">{passwordSaving ? 'Saving...' : 'Update Password'}</button>
+                      <button onClick={() => { setShowPasswordForm(false); setNewPassword(''); setConfirmPassword(''); setPasswordError('') }} className="px-4 py-2.5 border border-warm rounded-full font-syne font-semibold text-sm cursor-pointer hover:bg-cream transition-colors">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-semibold">Password</div>
+                      <div className="text-xs text-gray-400">Change your account password</div>
+                    </div>
+                    <button onClick={() => setShowPasswordForm(true)} className="px-4 py-2 border border-warm rounded-[10px] font-syne font-bold text-xs cursor-pointer hover:bg-cream transition-colors">Change</button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

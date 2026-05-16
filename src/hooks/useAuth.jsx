@@ -49,6 +49,7 @@ export function AuthProvider({ children }) {
               name: data?.name || session.user.user_metadata?.name || session.user.email?.split('@')[0],
               phone: data?.phone || '',
               emailVerified: session.user.email_confirmed_at != null || session.user.app_metadata?.provider === 'google',
+              isSSO: session.user.app_metadata?.provider === 'google',
             })
             checkMfa()
             loadFamily(session.user.id)
@@ -68,6 +69,7 @@ export function AuthProvider({ children }) {
           name: session.user.user_metadata?.name || session.user.email?.split('@')[0],
           phone: session.user.user_metadata?.phone || '',
           emailVerified: session.user.email_confirmed_at != null || session.user.app_metadata?.provider === 'google',
+          isSSO: session.user.app_metadata?.provider === 'google',
         }
         supabase
           .from('profiles')
