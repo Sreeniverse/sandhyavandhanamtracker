@@ -273,7 +273,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="text-center mt-8 text-[0.65rem] text-gray-300 font-syne">v0.1.13</div>
+      <div className="text-center mt-8 text-[0.65rem] text-gray-300 font-syne">v{__APP_VERSION__}</div>
 
       {deleteError && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-[10px] text-sm mt-4">{deleteError}</div>
