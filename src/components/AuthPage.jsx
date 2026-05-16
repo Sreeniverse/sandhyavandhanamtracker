@@ -132,7 +132,7 @@ export default function AuthPage() {
             <span className="w-1.5 h-1.5 rounded-full bg-saffron-400 block animate-pulse" />Daily Sandhyavandhanam Tracker
           </div>
           <img src="/peryava.jpeg" alt="Peryava" className="w-[120px] h-auto rounded-lg mb-6 border-2 border-white/15" />
-          <h1 className="text-[1.85rem] text-white font-extrabold leading-tight tracking-tight mb-5 font-syne">Build habits.<br /><em className="not-italic text-saffron-400">Track</em> your<br />daily sandhyavandana.</h1>
+          <h1 className="text-[1.85rem] text-white font-extrabold leading-tight tracking-tight mb-5 font-syne">Build habits.<br /><em className="not-italic text-saffron-400">Track</em> your<br />daily Sandhyavandanam.</h1>
         </div>
       </div>
 
@@ -141,7 +141,7 @@ export default function AuthPage() {
         <div className="absolute top-[-40px] left-1/2 -translate-x-1/2 w-[260px] h-[260px] rounded-full bg-[radial-gradient(circle,rgba(243,124,2,0.2)_0%,transparent_70%)]" />
         <div className="relative">
           <img src="/peryava.jpeg" alt="Peryava" className="w-24 h-auto rounded-lg mx-auto mb-4 border-2 border-white/15" />
-          <h1 className="text-[1.4rem] text-white font-extrabold leading-tight tracking-tight font-syne">Build habits.<br /><em className="not-italic text-saffron-400">Track</em> your<br />daily sandhyavandana.</h1>
+          <h1 className="text-[1.4rem] text-white font-extrabold leading-tight tracking-tight font-syne">Build habits.<br /><em className="not-italic text-saffron-400">Track</em> your<br />daily Sandhyavandanam.</h1>
         </div>
       </div>
 
