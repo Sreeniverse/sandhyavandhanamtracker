@@ -62,7 +62,7 @@ function MonthlyHeatmap({ history }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl md:rounded-[16px] p-4 md:p-5 shadow-sm">
+    <div className="bg-white rounded-2xl md:rounded-[16px] p-4 md:p-5 mt-5 md:mt-8 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <button onClick={prevMonth} className="w-7 h-7 rounded-lg border border-warm bg-white font-syne text-sm cursor-pointer hover:bg-cream transition-colors flex items-center justify-center">&larr;</button>
         <div className="font-syne font-bold text-sm uppercase tracking-wider">{MONTH_NAMES[viewMonth]} {viewYear}</div>
