@@ -131,21 +131,8 @@ export default function AuthPage() {
           <div className="inline-flex items-center gap-2 bg-white/8 border border-white/12 text-white/75 px-3.5 py-1.5 rounded-full text-xs tracking-widest uppercase font-syne mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-saffron-400 block animate-pulse" />Daily Sandhyavandhanam Tracker
           </div>
-          <img src="/peryava.jpeg" alt="Peryava" className="w-[72px] h-auto rounded-lg mb-6 border-2 border-white/15" />
+          <img src="/peryava.jpeg" alt="Peryava" className="w-[120px] h-auto rounded-lg mb-6 border-2 border-white/15" />
           <h1 className="text-[1.85rem] text-white font-extrabold leading-tight tracking-tight mb-5 font-syne">Build habits.<br /><em className="not-italic text-saffron-400">Track</em> your<br />daily sandhyavandana.</h1>
-          <p className="text-white/50 text-base max-w-[360px]">Log your Pratah, Madhyahnika & Saayam Sandhyavandhanam rituals.</p>
-          <div className="flex gap-3 mt-8">
-            {[
-              { icon: '🌅', label: 'Pratha\nSandhya' },
-              { icon: '☀️', label: 'Madhyanika' },
-              { icon: '🌙', label: 'Saayam\nSandhya' },
-            ].map((s) => (
-              <div key={s.label} className="flex-1 bg-white/6 border border-white/8 rounded-[10px] py-3.5 px-3 text-center hover:bg-white/10 transition-colors">
-                <div className="text-2xl mb-1">{s.icon}</div>
-                <div className="text-[0.68rem] text-white/40 uppercase tracking-wider font-syne leading-tight" style={{ whiteSpace: 'pre-line' }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -153,14 +140,8 @@ export default function AuthPage() {
       <div className="md:hidden bg-gradient-to-b from-ink to-[#1a1a1a] py-10 px-6 text-center relative overflow-hidden">
         <div className="absolute top-[-40px] left-1/2 -translate-x-1/2 w-[260px] h-[260px] rounded-full bg-[radial-gradient(circle,rgba(243,124,2,0.2)_0%,transparent_70%)]" />
         <div className="relative">
-          <img src="/peryava.jpeg" alt="Peryava" className="w-14 h-auto rounded-lg mx-auto mb-4 border-2 border-white/15" />
+          <img src="/peryava.jpeg" alt="Peryava" className="w-24 h-auto rounded-lg mx-auto mb-4 border-2 border-white/15" />
           <h1 className="text-[1.4rem] text-white font-extrabold leading-tight tracking-tight font-syne">Build habits.<br /><em className="not-italic text-saffron-400">Track</em> your<br />daily sandhyavandana.</h1>
-          <p className="text-white/50 text-sm mt-2">Log your Pratah, Madhyahnika & Saayam Sandhya</p>
-          <div className="flex gap-2 justify-center mt-4">
-            <span className="bg-white/8 border border-white/10 rounded-full px-3 py-1.5 text-[0.7rem] text-white/50 font-syne">🌅 Pratha</span>
-            <span className="bg-white/8 border border-white/10 rounded-full px-3 py-1.5 text-[0.7rem] text-white/50 font-syne">☀️ Madhyanika</span>
-            <span className="bg-white/8 border border-white/10 rounded-full px-3 py-1.5 text-[0.7rem] text-white/50 font-syne">🌙 Saayam</span>
-          </div>
         </div>
       </div>
 

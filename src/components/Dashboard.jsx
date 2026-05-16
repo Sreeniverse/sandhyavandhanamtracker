@@ -5,6 +5,88 @@ import { useStats } from '../hooks/useStats'
 import { SLOTS } from '../utils/slots'
 import { cancelSlotReminder, scheduleAllReminders } from '../utils/notifications'
 
+const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+function MonthlyHeatmap({ history }) {
+  const now = new Date()
+  const [viewYear, setViewYear] = useState(now.getFullYear())
+  const [viewMonth, setViewMonth] = useState(now.getMonth())
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1) }
+    else setViewMonth(viewMonth - 1)
+  }
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1) }
+    else setViewMonth(viewMonth + 1)
+  }
+
+  // Build a lookup: dateStr -> { morning, afternoon, evening }
+  const lookup = {}
+  for (const r of history) {
+    lookup[r.date] = r
+  }
+
+  // Build grid for the month
+  const firstDay = new Date(viewYear, viewMonth, 1)
+  const lastDay = new Date(viewYear, viewMonth + 1, 0)
+  const startDow = (firstDay.getDay() + 6) % 7 // Mon=0
+  const daysInMonth = lastDay.getDate()
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+  const cells = []
+  // Empty cells before first day
+  for (let i = 0; i < startDow; i++) cells.push(null)
+  // Day cells
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    const record = lookup[dateStr]
+    let status = 'empty' // no record
+    if (record) {
+      const m = record.morning?.done
+      const a = record.afternoon?.done
+      const e = record.evening?.done
+      if (m && a && e) status = 'perfect'
+      else if (m || a || e) status = 'partial'
+      else status = 'missed'
+    }
+    cells.push({ day: d, dateStr, status, isToday: dateStr === todayStr })
+  }
+
+  const statusColor = {
+    perfect: 'bg-success text-white',
+    partial: 'bg-saffron-400 text-white',
+    missed: 'bg-red-400 text-white',
+    empty: 'bg-gray-100 text-gray-300',
+  }
+
+  return (
+    <div className="bg-white rounded-2xl md:rounded-[16px] p-4 md:p-5 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={prevMonth} className="w-7 h-7 rounded-lg border border-warm bg-white font-syne text-sm cursor-pointer hover:bg-cream transition-colors flex items-center justify-center">&larr;</button>
+        <div className="font-syne font-bold text-sm uppercase tracking-wider">{MONTH_NAMES[viewMonth]} {viewYear}</div>
+        <button onClick={nextMonth} className="w-7 h-7 rounded-lg border border-warm bg-white font-syne text-sm cursor-pointer hover:bg-cream transition-colors flex items-center justify-center">&rarr;</button>
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {WEEKDAYS.map(d => (
+          <div key={d} className="text-center text-[0.55rem] md:text-[0.65rem] font-syne font-semibold text-gray-400 uppercase tracking-wider py-1">{d}</div>
+        ))}
+        {cells.map((cell, i) => (
+          <div key={i} className={`aspect-square rounded-[6px] md:rounded-[8px] flex items-center justify-center text-[0.6rem] md:text-xs font-syne font-bold ${cell ? `${statusColor[cell.status]} ${cell.isToday ? 'ring-2 ring-saffron-600' : ''}` : ''}`}>
+            {cell ? cell.day : ''}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-center gap-3 md:gap-4 mt-3">
+        <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-[3px] bg-success" /><span className="text-[0.55rem] md:text-[0.65rem] text-gray-400 font-syne">All done</span></div>
+        <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-[3px] bg-saffron-400" /><span className="text-[0.55rem] md:text-[0.65rem] text-gray-400 font-syne">Partial</span></div>
+        <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-[3px] bg-red-400" /><span className="text-[0.55rem] md:text-[0.65rem] text-gray-400 font-syne">Missed</span></div>
+      </div>
+    </div>
+  )
+}
+
 function ConsistencyRings({ stats }) {
   return (
     <div className="bg-white rounded-2xl md:rounded-[16px] p-4 md:p-5 mb-5 shadow-sm">
@@ -124,38 +206,7 @@ export default function Dashboard() {
         })}
       </div>
 
-      {history.length > 0 && (
-        <div className="mt-8 md:mt-12">
-          <div className="text-lg md:text-xl font-bold font-syne mb-3 flex items-center gap-2 after:content-[''] after:flex-1 after:h-px after:bg-warm">Recent History</div>
-          <div className="flex flex-col gap-2">
-            {history.slice(0, 7).map((record) => (
-              <div key={record.id || record.date} className={`rounded-[10px] md:rounded-[10px] px-4 py-3 md:py-3.5 shadow-sm grid grid-cols-1 md:grid-cols-[140px_repeat(3,1fr)] items-center gap-2 md:gap-4 ${record.date === selectedDate ? 'bg-saffron-100/50' : 'bg-white'}`}>
-                <div>
-                  <div className="font-syne font-bold text-sm text-ink">{new Date(record.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
-                  {record.profile_for && (
-                    <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full text-[0.52rem] font-bold font-syne uppercase tracking-wider">
-                      {familyMembers.find(m => m.id === record.profile_for)?.name || 'Son'}
-                    </span>
-                  )}
-                </div>
-                {SLOTS.map((slot) => {
-                  const s = record[slot.key] || {}
-                  return (
-                    <div key={slot.key} className="text-center">
-                      <div className="text-[0.6rem] md:text-[0.68rem] uppercase tracking-wider text-gray-300 font-syne mb-0.5 md:hidden">{slot.label}</div>
-                      {s.done ? (
-                        <div className="text-sm text-success font-bold">✓ Done</div>
-                      ) : (
-                        <div className="text-sm text-gray-300">–</div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <MonthlyHeatmap history={history} />
 
       {confirmUndone && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

@@ -17,7 +17,7 @@ export function useActivities() {
   const [selectedDate, setSelectedDate] = useState(toDateString(new Date()))
 
   const todayStr = toDateString(new Date())
-  const minDate = toDateString(new Date(Date.now() - 30 * 86400000))
+  const minDate = toDateString(new Date(Date.now() - 3 * 86400000))
 
   const fetchDay = useCallback(async (date) => {
     if (!user) return null
