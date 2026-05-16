@@ -59,19 +59,17 @@ async function deleteWebPushSubscription(userId) {
   }
 }
 
-async function savePref(userId, pushVal, emailVal) {
+async function savePref(userId, enabled) {
   const { error } = await supabase
     .from('notification_preferences')
-    .upsert({ user_id: userId, enabled: pushVal, email_enabled: emailVal }, { onConflict: 'user_id' })
+    .upsert({ user_id: userId, enabled }, { onConflict: 'user_id' })
   return error
 }
 
 export function useNotifications(user) {
   const [enabled, setEnabled] = useState(false)
-  const [emailEnabled, setEmailEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [emailError, setEmailError] = useState('')
   const native = isNative()
 
   useEffect(() => {
@@ -81,12 +79,11 @@ export function useNotifications(user) {
     }
     supabase
       .from('notification_preferences')
-      .select('enabled, email_enabled')
+      .select('enabled')
       .eq('user_id', user.id)
       .maybeSingle()
       .then(({ data }) => {
         setEnabled(data?.enabled ?? false)
-        setEmailEnabled(data?.email_enabled ?? false)
         setLoading(false)
       })
   }, [user])
@@ -135,7 +132,7 @@ export function useNotifications(user) {
       }
     }
 
-    const saveError = await savePref(user.id, next, emailEnabled)
+    const saveError = await savePref(user.id, next)
     if (saveError) {
       setError(friendlyError(saveError))
       return
@@ -150,22 +147,9 @@ export function useNotifications(user) {
         await setupWebPush(user.id)
       }
     }
-  }, [user, native, enabled, emailEnabled])
-
-  const toggleEmail = useCallback(async () => {
-    setEmailError('')
-    const next = !emailEnabled
-
-    const saveError = await savePref(user.id, enabled, next)
-    if (saveError) {
-      setEmailError(friendlyError(saveError))
-      return
-    }
-
-    setEmailEnabled(next)
-  }, [user, enabled, emailEnabled])
+  }, [user, native, enabled])
 
   const supported = native || isPushSupported()
 
-  return { enabled, loading, error, supported, toggle, emailEnabled, emailError, toggleEmail }
+  return { enabled, loading, error, supported, toggle }
 }

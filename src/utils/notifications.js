@@ -7,8 +7,8 @@ const SLOT_CONFIG = {
 }
 
 const SLOT_TIMES = {
-  morning: { hour: 9, minute: 30 },
-  afternoon: { hour: 13, minute: 30 },
+  morning: { hour: 9, minute: 0 },
+  afternoon: { hour: 12, minute: 0 },
   evening: { hour: 18, minute: 30 },
 }
 

@@ -6,9 +6,9 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
 const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_EMAIL = Deno.env.get("VAPID_EMAIL") || "mailto:sreeni@asthikasamaj.com";
-const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY") || "";
-const SENDER_EMAIL = Deno.env.get("SENDER_EMAIL") || "sreeni@asthikasamaj.com";
-const APP_URL = Deno.env.get("APP_URL") || "https://nithyakarmatracker.netlify.app";
+// const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY") || "";
+// const SENDER_EMAIL = Deno.env.get("SENDER_EMAIL") || "sreeni@asthikasamaj.com";
+// const APP_URL = Deno.env.get("APP_URL") || "https://nithyakarmatracker.netlify.app";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -31,9 +31,9 @@ const BODIES: Record<string, string> = {
 };
 
 const TIME_WINDOWS: Record<string, string> = {
-  morning: "9:00 - 11:00 AM IST",
-  afternoon: "1:00 - 3:00 PM IST",
-  evening: "6:00 - 8:00 PM IST",
+  morning: "8:30 - 10:30 AM IST",
+  afternoon: "11:30 AM - 1:00 PM IST",
+  evening: "6:30 - 8:00 PM IST",
 };
 
 const SLOT_COLORS: Record<string, string> = {
@@ -93,8 +93,8 @@ Deno.serve(async (req: Request) => {
     const istHour = istDate.getHours();
     const istMinute = istDate.getMinutes();
 
-    const isMorning = istHour >= 9 && istHour < 11;
-    const isAfternoon = istHour >= 13 && istHour < 15;
+    const isMorning = istHour >= 8 && istHour < 11;
+    const isAfternoon = istHour >= 11 && istHour < 13;
     const isEvening = istHour >= 18 && istHour < 20;
 
     const slotsToCheck: string[] = [];
@@ -170,74 +170,73 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // --- EMAIL NOTIFICATIONS ---
-    let emailsSent = 0;
-    let emailsFailed = 0;
-
-    if (BREVO_API_KEY) {
-      const { data: emailPrefs } = await supabase
-        .from("notification_preferences")
-        .select("user_id, profiles(name, email)")
-        .eq("email_enabled", true);
-
-      if (emailPrefs && emailPrefs.length > 0) {
-        const emailUserIds = emailPrefs.map((e: any) => e.user_id);
-        const { data: emailActivities } = await supabase
-          .from("activities")
-          .select("user_id, morning_done, afternoon_done, evening_done")
-          .in("user_id", emailUserIds)
-          .eq("date", today);
-
-        const emailActivityMap = new Map();
-        for (const act of emailActivities || []) {
-          emailActivityMap.set(act.user_id, act);
-        }
-
-        for (const ep of emailPrefs) {
-          const userName = ep.profiles?.name || "Devotee";
-          const userEmail = ep.profiles?.email;
-          if (!userEmail) continue;
-
-          const activity = emailActivityMap.get(ep.user_id);
-          for (const slot of slotsToCheck) {
-            const done = activity ? activity[`${slot}_done`] : false;
-            if (!done) {
-              try {
-                const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "api-key": BREVO_API_KEY,
-                  },
-                  body: JSON.stringify({
-                    sender: { name: "Sandhyavandhanam", email: SENDER_EMAIL },
-                    to: [{ email: userEmail, name: userName }],
-                    subject: `Reminder: ${TITLES[slot]}`,
-                    htmlContent: buildEmailHtml(userName, slot),
-                  }),
-                });
-
-                if (res.ok) {
-                  emailsSent++;
-                } else {
-                  const errBody = await res.text();
-                  console.error(`Brevo email failed for ${userEmail}:`, res.status, errBody);
-                  emailsFailed++;
-                }
-              } catch (err) {
-                console.error(`Brevo email error for ${userEmail}:`, err);
-                emailsFailed++;
-              }
-            }
-          }
-        }
-      }
-    }
+    // --- EMAIL NOTIFICATIONS (commented out - client opted out) ---
+    // let emailsSent = 0;
+    // let emailsFailed = 0;
+    //
+    // if (BREVO_API_KEY) {
+    //   const { data: emailPrefs } = await supabase
+    //     .from("notification_preferences")
+    //     .select("user_id, profiles(name, email)")
+    //     .eq("email_enabled", true);
+    //
+    //   if (emailPrefs && emailPrefs.length > 0) {
+    //     const emailUserIds = emailPrefs.map((e: any) => e.user_id);
+    //     const { data: emailActivities } = await supabase
+    //       .from("activities")
+    //       .select("user_id, morning_done, afternoon_done, evening_done")
+    //       .in("user_id", emailUserIds)
+    //       .eq("date", today);
+    //
+    //     const emailActivityMap = new Map();
+    //     for (const act of emailActivities || []) {
+    //       emailActivityMap.set(act.user_id, act);
+    //     }
+    //
+    //     for (const ep of emailPrefs) {
+    //       const userName = ep.profiles?.name || "Devotee";
+    //       const userEmail = ep.profiles?.email;
+    //       if (!userEmail) continue;
+    //
+    //       const activity = emailActivityMap.get(ep.user_id);
+    //       for (const slot of slotsToCheck) {
+    //         const done = activity ? activity[`${slot}_done`] : false;
+    //         if (!done) {
+    //           try {
+    //             const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    //               method: "POST",
+    //               headers: {
+    //                 "Content-Type": "application/json",
+    //                 "api-key": BREVO_API_KEY,
+    //               },
+    //               body: JSON.stringify({
+    //                 sender: { name: "Sandhyavandhanam", email: SENDER_EMAIL },
+    //                 to: [{ email: userEmail, name: userName }],
+    //                 subject: `Reminder: ${TITLES[slot]}`,
+    //                 htmlContent: buildEmailHtml(userName, slot),
+    //               }),
+    //             });
+    //
+    //             if (res.ok) {
+    //               emailsSent++;
+    //             } else {
+    //               const errBody = await res.text();
+    //               console.error(`Brevo email failed for ${userEmail}:`, res.status, errBody);
+    //               emailsFailed++;
+    //             }
+    //           } catch (err) {
+    //             console.error(`Brevo email error for ${userEmail}:`, err);
+    //             emailsFailed++;
+    //           }
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
 
     return new Response(JSON.stringify({
       message: "Reminders processed",
       push: { sent: pushSent, failed: pushFailed },
-      email: { sent: emailsSent, failed: emailsFailed },
       slots: slotsToCheck,
       istHour,
       istMinute,

@@ -13,7 +13,7 @@ export default function ProfilePage() {
   const isSSO = user?.isSSO
   const { history } = useActivities()
   const stats = useStats(history)
-  const { enabled: notifEnabled, loading: notifLoading, error: notifError, supported: notifSupported, toggle: toggleNotif, emailEnabled, emailError, toggleEmail } = useNotifications(user)
+  const { enabled: notifEnabled, loading: notifLoading, error: notifError, supported: notifSupported, toggle: toggleNotif } = useNotifications(user)
   const viewingSon = !!selectedProfile
   const [name, setName] = useState(user?.name || '')
   const [phone, setPhone] = useState(user?.phone || '')
@@ -314,29 +314,6 @@ export default function ProfilePage() {
             )}
           </div>
           {notifError && <div className="px-4 md:px-6 pb-3 text-xs text-red-500">{notifError}</div>}
-          <div className="border-t border-warm mx-4 md:mx-6" />
-          <div className="flex items-center justify-between px-4 md:px-6 py-3">
-            <div>
-              <div className="text-sm">Email Reminders</div>
-              <div className="text-xs text-gray-400">Receive reminders at your verified email</div>
-            </div>
-            {!notifLoading ? (
-              <div
-                onClick={toggleEmail}
-                role="switch"
-                aria-checked={emailEnabled}
-                aria-label="Toggle email reminders"
-                tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleEmail() }}}
-                className={`w-11 h-[26px] rounded-full cursor-pointer transition-colors flex items-center flex-shrink-0 ${emailEnabled ? 'bg-saffron-600 justify-end' : 'bg-gray-300 justify-start'}`}
-              >
-                <span className="w-5 h-5 rounded-full bg-white shadow-sm mx-[2px]" />
-              </div>
-            ) : (
-              <div className="w-5 h-5 border-2 border-warm border-t-saffron-600 rounded-full animate-spin" />
-            )}
-          </div>
-          {emailError && <div className="px-4 md:px-6 pb-3 text-xs text-red-500">{emailError}</div>}
         </div>
       </div>
 
