@@ -50,4 +50,18 @@ if (vcMatch && vnMatch) {
   process.exit(1)
 }
 
+// Update ProfilePage.jsx version string (fallback for any hardcoded references)
+const profilePath = resolve(root, 'src', 'components', 'ProfilePage.jsx')
+if (profilePath) {
+  let profile = readFileSync(profilePath, 'utf8')
+  // Update the dynamic __APP_VERSION__ reference - no change needed
+  // But update any hardcoded v0.x.y strings if they exist
+  const hardcodedMatch = profile.match(/v0\.\d+\.\d+/g)
+  if (hardcodedMatch) {
+    profile = profile.replace(/v0\.\d+\.\d+/g, `v${newVer}`)
+    writeFileSync(profilePath, profile)
+    console.log(`ProfilePage.jsx: updated hardcoded version strings to v${newVer}`)
+  }
+}
+
 console.log(`\nBumped ${bump} version: ${oldVer} -> ${newVer}`)
