@@ -68,12 +68,12 @@ function MonthlyHeatmap({ history }) {
         <div className="font-syne font-bold text-sm uppercase tracking-wider">{MONTH_NAMES[viewMonth]} {viewYear}</div>
         <button onClick={nextMonth} className="w-7 h-7 rounded-lg border border-warm bg-white font-syne text-sm cursor-pointer hover:bg-cream transition-colors flex items-center justify-center">&rarr;</button>
       </div>
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-[3px] md:gap-1.5">
         {WEEKDAYS.map(d => (
           <div key={d} className="text-center text-[0.55rem] md:text-[0.65rem] font-syne font-semibold text-gray-400 uppercase tracking-wider py-1">{d}</div>
         ))}
         {cells.map((cell, i) => (
-          <div key={i} className={`aspect-square rounded-[6px] md:rounded-[8px] flex items-center justify-center text-[0.6rem] md:text-xs font-syne font-bold ${cell ? `${statusColor[cell.status]} ${cell.isToday ? 'ring-2 ring-saffron-600' : ''}` : ''}`}>
+          <div key={i} className={`aspect-square rounded-[6px] md:rounded-[8px] flex items-center justify-center text-[0.6rem] md:text-xs font-syne font-bold p-[2px] md:p-1 ${cell ? `${statusColor[cell.status]} ${cell.isToday ? 'ring-2 ring-saffron-600' : ''}` : ''}`}>
             {cell ? cell.day : ''}
           </div>
         ))}
