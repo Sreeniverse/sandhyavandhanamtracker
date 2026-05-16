@@ -124,15 +124,15 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen grid md:grid-cols-2">
       {/* Hero */}
-      <div className="hidden md:flex bg-ink flex-col justify-end p-12 relative overflow-hidden">
+      <div className="hidden md:flex bg-ink flex-col items-center justify-center p-12 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(200,68,26,0.3)_0%,transparent_60%),radial-gradient(ellipse_at_80%_80%,rgba(124,58,237,0.2)_0%,transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[length:28px_28px]" />
-        <div className="relative z-10">
+        <div className="relative z-10 text-center">
           <div className="inline-flex items-center gap-2 bg-white/8 border border-white/12 text-white/75 px-3.5 py-1.5 rounded-full text-xs tracking-widest uppercase font-syne mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-saffron-400 block animate-pulse" />Daily Sandhyavandhanam Tracker
           </div>
-          <img src="/peryava.jpeg" alt="Peryava" className="w-[120px] h-auto rounded-lg mb-6 border-2 border-white/15" />
-          <h1 className="text-[1.85rem] text-white font-extrabold leading-tight tracking-tight mb-5 font-syne">Build habits.<br /><em className="not-italic text-saffron-400">Track</em> your<br />daily Sandhyavandanam.</h1>
+          <img src="/peryava.jpeg" alt="Peryava" className="w-[160px] h-auto rounded-xl mx-auto mb-6 border-2 border-white/15" />
+          <h1 className="text-[1.85rem] text-white font-extrabold leading-tight tracking-tight font-syne">Build habits.<br /><em className="not-italic text-saffron-400">Track</em> your<br />daily Sandhyavandanam.</h1>
         </div>
       </div>
 
@@ -140,7 +140,7 @@ export default function AuthPage() {
       <div className="md:hidden bg-gradient-to-b from-ink to-[#1a1a1a] py-10 px-6 text-center relative overflow-hidden">
         <div className="absolute top-[-40px] left-1/2 -translate-x-1/2 w-[260px] h-[260px] rounded-full bg-[radial-gradient(circle,rgba(243,124,2,0.2)_0%,transparent_70%)]" />
         <div className="relative">
-          <img src="/peryava.jpeg" alt="Peryava" className="w-24 h-auto rounded-lg mx-auto mb-4 border-2 border-white/15" />
+          <img src="/peryava.jpeg" alt="Peryava" className="w-32 h-auto rounded-xl mx-auto mb-4 border-2 border-white/15" />
           <h1 className="text-[1.4rem] text-white font-extrabold leading-tight tracking-tight font-syne">Build habits.<br /><em className="not-italic text-saffron-400">Track</em> your<br />daily Sandhyavandanam.</h1>
         </div>
       </div>
