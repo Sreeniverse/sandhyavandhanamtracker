@@ -21,28 +21,36 @@ function isPushSupported() {
 }
 
 async function setupWebPush(userId) {
+  console.log('[PUSH] setupWebPush called', { userId, isPushSupported: isPushSupported(), hasVapidKey: !!VAPID_PUBLIC_KEY })
   if (!isPushSupported() || !VAPID_PUBLIC_KEY) {
-    console.warn('Web Push not supported or VAPID key missing')
+    console.warn('[PUSH] Web Push not supported or VAPID key missing')
     return
   }
   try {
+    console.log('[PUSH] waiting for serviceWorker.ready...')
     const registration = await navigator.serviceWorker.ready
+    console.log('[PUSH] SW ready, checking existing subscription...')
     let subscription = await registration.pushManager.getSubscription()
+    console.log('[PUSH] existing subscription:', subscription ? 'yes' : 'no')
     if (!subscription) {
+      console.log('[PUSH] subscribing with VAPID key...')
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       })
+      console.log('[PUSH] subscribe succeeded')
     }
     const sub = subscription.toJSON()
+    console.log('[PUSH] saving subscription to DB...')
     await supabase.from('push_subscriptions').upsert({
       user_id: userId,
       endpoint: sub.endpoint,
       p256dh: sub.keys.p256dh,
       auth_key: sub.keys.auth,
     }, { onConflict: 'endpoint' })
+    console.log('[PUSH] subscription saved successfully')
   } catch (err) {
-    console.error('Failed to setup web push:', err)
+    console.error('[PUSH] Failed to setup web push:', err)
   }
 }
 
@@ -144,6 +152,7 @@ export function useNotifications(user) {
       if (native) {
         await scheduleAllReminders()
       } else {
+        console.log('[PUSH] toggle complete, calling setupWebPush...')
         await setupWebPush(user.id)
       }
     }
