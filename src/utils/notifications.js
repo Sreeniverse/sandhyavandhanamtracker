@@ -86,3 +86,37 @@ export async function cancelSlotReminder(slot) {
 
   await LocalNotifications.cancel({ notifications: [{ id: config.id }] })
 }
+
+export async function scheduleTestNotification(slot) {
+  const config = SLOT_CONFIG[slot]
+  const time = SLOT_TIMES[slot]
+  if (!config || !time) {
+    console.error(`Unknown slot: ${slot}. Use: morning, afternoon, evening`)
+    return
+  }
+
+  if (isNative()) {
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    await ensureChannel()
+
+    const at = new Date()
+    at.setHours(time.hour, time.minute, 0, 0)
+    if (at <= new Date()) at.setDate(at.getDate() + 1)
+
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: config.id,
+        title: config.title,
+        body: config.body,
+        schedule: { at },
+        extra: { slot, test: true },
+      }],
+    })
+
+    console.log(`Test notification scheduled for ${slot} at ${at.toLocaleTimeString()}`)
+    return at
+  }
+
+  console.log('Test notification: not on native platform. Use web push via toggle instead.')
+  return null
+}
