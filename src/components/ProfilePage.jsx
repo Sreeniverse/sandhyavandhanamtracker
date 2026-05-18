@@ -39,7 +39,7 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState('')
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [, setPasswordSuccess] = useState(false)
-  const [testNotifSending, setTestNotifSending] = useState(false)
+  const [testNotifStatus, setTestNotifStatus] = useState('idle') // idle | sending | sent | failed
 
   useEffect(() => {
     supabase.auth.mfa.listFactors().then(({ data }) => {
@@ -317,13 +317,29 @@ export default function ProfilePage() {
           </div>
           {notifError && <div className="px-4 md:px-6 pb-3 text-xs text-red-500">{notifError}</div>}
           {notifEnabled && !notifLoading && (
-            <div className="flex justify-end px-4 md:px-6 pb-3">
+            <div className="flex justify-end px-4 md:px-6 pb-3 items-center gap-2">
+              {testNotifStatus === 'sent' && (
+                <span className="text-xs text-success font-syne font-semibold">Sent!</span>
+              )}
+              {testNotifStatus === 'failed' && (
+                <span className="text-xs text-red-500 font-syne font-semibold">Failed</span>
+              )}
               <button
                 className="px-4 py-1.5 border border-saffron-500 text-saffron-600 rounded-full font-syne font-bold text-xs cursor-pointer hover:bg-saffron-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={async () => { setTestNotifSending(true); await sendTestNotification(); setTimeout(() => setTestNotifSending(false), 2000) }}
-                disabled={testNotifSending}
+                onClick={async () => {
+                  setTestNotifStatus('sending')
+                  try {
+                    await sendTestNotification()
+                    setTestNotifStatus('sent')
+                  } catch {
+                    setTestNotifStatus('failed')
+                  } finally {
+                    setTimeout(() => setTestNotifStatus('idle'), 3000)
+                  }
+                }}
+                disabled={testNotifStatus === 'sending'}
               >
-                {testNotifSending ? 'Sending...' : 'Test Notification'}
+                {testNotifStatus === 'sending' ? 'Sending...' : 'Test Notification'}
               </button>
             </div>
           )}
