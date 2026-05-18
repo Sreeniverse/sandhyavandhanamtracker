@@ -40,6 +40,7 @@ export default function ProfilePage() {
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [, setPasswordSuccess] = useState(false)
   const [testNotifStatus, setTestNotifStatus] = useState('idle') // idle | sending | sent | failed
+  const [testNotifError, setTestNotifError] = useState('')
 
   useEffect(() => {
     supabase.auth.mfa.listFactors().then(({ data }) => {
@@ -322,16 +323,18 @@ export default function ProfilePage() {
                 <span className="text-xs text-success font-syne font-semibold">Sent!</span>
               )}
               {testNotifStatus === 'failed' && (
-                <span className="text-xs text-red-500 font-syne font-semibold">Failed</span>
+                <span className="text-xs text-red-500 font-syne font-semibold">{testNotifError || 'Failed'}</span>
               )}
               <button
                 className="px-4 py-1.5 border border-saffron-500 text-saffron-600 rounded-full font-syne font-bold text-xs cursor-pointer hover:bg-saffron-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={async () => {
+                  setTestNotifError('')
                   setTestNotifStatus('sending')
                   try {
                     await sendTestNotification()
                     setTestNotifStatus('sent')
-                  } catch {
+                  } catch (err) {
+                    setTestNotifError(err.message || 'Failed')
                     setTestNotifStatus('failed')
                   } finally {
                     setTimeout(() => setTestNotifStatus('idle'), 3000)

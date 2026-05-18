@@ -92,6 +92,11 @@ export async function sendTestNotification() {
     const { LocalNotifications } = await import('@capacitor/local-notifications')
     await ensureChannel()
 
+    const perm = await checkPermission()
+    if (!perm) {
+      throw new Error('Notification permission not granted. Check app settings.')
+    }
+
     const at = new Date(Date.now() + 5000)
 
     await LocalNotifications.schedule({
@@ -108,13 +113,16 @@ export async function sendTestNotification() {
     return true
   }
 
-  if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-    new Notification('Sandhyavandhanam', { body: 'Test notification - if you see this, push is working!' })
-    return true
+  if (typeof Notification === 'undefined') {
+    throw new Error('Notifications not supported in this browser.')
   }
 
-  console.log('Test notification: no permission or unsupported platform.')
-  return false
+  if (Notification.permission !== 'granted') {
+    throw new Error(`Notification permission is "${Notification.permission}". Enable notifications in browser settings.`)
+  }
+
+  new Notification('Sandhyavandhanam', { body: 'Test notification - if you see this, push is working!' })
+  return true
 }
 
 export async function scheduleTestNotification(slot) {
