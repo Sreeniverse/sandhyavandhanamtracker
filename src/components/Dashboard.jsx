@@ -42,7 +42,7 @@ function MonthlyHeatmap({ history }) {
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
     const record = lookup[dateStr]
-    let status = 'empty' // no record
+    let status = 'empty'
     if (record) {
       const m = record.morning?.done
       const a = record.afternoon?.done
@@ -50,6 +50,8 @@ function MonthlyHeatmap({ history }) {
       if (m && a && e) status = 'perfect'
       else if (m || a || e) status = 'partial'
       else status = 'missed'
+    } else if (dateStr < todayStr) {
+      status = 'missed'
     }
     cells.push({ day: d, dateStr, status, isToday: dateStr === todayStr })
   }
