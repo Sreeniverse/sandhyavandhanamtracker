@@ -113,7 +113,7 @@ export async function sendTestNotification() {
     return true
   }
 
-  if (typeof Notification === 'undefined') {
+  if (!('Notification' in window)) {
     throw new Error('Notifications not supported in this browser.')
   }
 
@@ -121,7 +121,12 @@ export async function sendTestNotification() {
     throw new Error(`Notification permission is "${Notification.permission}". Enable notifications in browser settings.`)
   }
 
-  new Notification('Sandhyavandhanam', { body: 'Test notification - if you see this, push is working!' })
+  const reg = await navigator.serviceWorker.getRegistration()
+  if (!reg) {
+    throw new Error('No active service worker. Try reloading the page.')
+  }
+
+  await reg.showNotification('Sandhyavandhanam', { body: 'Test notification - if you see this, push is working!' })
   return true
 }
 
