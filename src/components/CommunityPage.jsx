@@ -64,9 +64,11 @@ export default function CommunityPage() {
     }
   }, [offset, loadingMore])
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     loadData()
-  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [user?.id])
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-[60vh]"><div className="w-7 h-7 border-3 border-warm border-t-saffron-600 rounded-full animate-spin" /></div>

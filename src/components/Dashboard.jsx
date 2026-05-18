@@ -108,7 +108,7 @@ function ConsistencyRings({ stats }) {
 }
 
 export default function Dashboard() {
-  const { user, selectedProfile, familyMembers } = useAuth()
+  const { selectedProfile } = useAuth()
   const { today, history, loading, error, logAction, selectedDate, navigateDate, goToToday, isToday, isPastDate, canGoBack, canGoForward } = useActivities()
   const stats = useStats(history)
   const [confirmUndone, setConfirmUndone] = useState(null)

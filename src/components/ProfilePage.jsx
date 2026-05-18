@@ -33,12 +33,12 @@ export default function ProfilePage() {
   const [removeConfirm, setRemoveConfirm] = useState(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [showPasswordForm, setShowPasswordForm] = useState(false)
-  const [currentPassword, setCurrentPassword] = useState('')
+  const [, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [passwordSaving, setPasswordSaving] = useState(false)
-  const [passwordSuccess, setPasswordSuccess] = useState(false)
+  const [, setPasswordSuccess] = useState(false)
   const [testNotifSending, setTestNotifSending] = useState(false)
 
   useEffect(() => {

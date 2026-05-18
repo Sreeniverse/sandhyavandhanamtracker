@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from './useAuth'
 import { useOnlineStatus } from './useOnlineStatus'
@@ -6,18 +6,26 @@ import { useOfflineQueue } from './useOfflineQueue'
 import { toDateString } from '../utils/dates'
 import { friendlyError } from '../utils/errors'
 
+const NOW = () => new Date()
+
 export function useActivities() {
-  const { user, selectedProfile, familyMembers } = useAuth()
+  const { user, selectedProfile } = useAuth()
   const isOnline = useOnlineStatus()
-  const { queueCount, enqueue, replay } = useOfflineQueue(isOnline)
+  const { queueCount, enqueue } = useOfflineQueue(isOnline)
   const [today, setToday] = useState(null)
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selectedDate, setSelectedDate] = useState(toDateString(new Date()))
+  const [selectedDate, setSelectedDate] = useState(() => toDateString(NOW()))
 
-  const todayStr = toDateString(new Date())
-  const minDate = toDateString(new Date(Date.now() - 3 * 86400000))
+  const dateBounds = useMemo(() => {
+    const now = NOW()
+    return {
+      todayStr: toDateString(now),
+      minDate: toDateString(new Date(now.getTime() - 3 * 86400000)),
+    }
+  }, [])
+  const { todayStr, minDate } = dateBounds
 
   const fetchDay = useCallback(async (date) => {
     if (!user) return null
@@ -87,6 +95,7 @@ export function useActivities() {
     }))
   }, [user, selectedProfile])
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!user) return
     setLoading(true)
@@ -99,6 +108,7 @@ export function useActivities() {
       setError(friendlyError(err))
       setLoading(false)
     })
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [user, selectedProfile, selectedDate, fetchDay, fetchHistory])
 
   const logAction = async (slot, action) => {

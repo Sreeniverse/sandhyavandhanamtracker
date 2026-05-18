@@ -11,6 +11,7 @@ export default function Layout() {
   const [showBackOnline, setShowBackOnline] = useState(false)
   const wasOffline = useRef(false)
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!isOnline) {
       wasOffline.current = true
@@ -21,6 +22,7 @@ export default function Layout() {
       const timer = setTimeout(() => setShowBackOnline(false), 3000)
       return () => clearTimeout(timer)
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [isOnline])
 
   const handleSignOut = async () => {

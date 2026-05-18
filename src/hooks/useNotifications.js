@@ -70,6 +70,7 @@ export function useNotifications(user) {
   const [error, setError] = useState('')
   const native = isNative()
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!user) {
       setLoading(false)
@@ -84,6 +85,7 @@ export function useNotifications(user) {
         setEnabled(data?.enabled ?? false)
         setLoading(false)
       })
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [user])
 
   // Reschedule local notifications on mount if enabled on native
