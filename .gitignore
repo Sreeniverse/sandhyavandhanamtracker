@@ -15,4 +15,5 @@ android/captures/
 *.jks
 *.keystore
 android/local.properties
+android/key.properties
 supabase/.temp/

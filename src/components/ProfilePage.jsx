@@ -7,7 +7,7 @@ import { SLOTS } from '../utils/slots'
 import { supabase } from '../supabase'
 import { MfaEnroll } from './MfaVerify'
 import { friendlyError } from '../utils/errors'
-// [TEST] import { sendTestNotification } from '../utils/notifications'
+import { sendTestNotification } from '../utils/notifications'
 
 export default function ProfilePage() {
   const { user, updateProfile, deleteAccount, familyMembers, addFamilyMember, removeFamilyMember, selectedProfile } = useAuth()
@@ -39,7 +39,7 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = useState('')
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
-  // [TEST] const [testNotifSending, setTestNotifSending] = useState(false)
+  const [testNotifSending, setTestNotifSending] = useState(false)
 
   useEffect(() => {
     supabase.auth.mfa.listFactors().then(({ data }) => {
@@ -316,7 +316,6 @@ export default function ProfilePage() {
             )}
           </div>
           {notifError && <div className="px-4 md:px-6 pb-3 text-xs text-red-500">{notifError}</div>}
-          {/* [TEST] Test Notification button - disabled after successful testing
           {notifEnabled && !notifLoading && (
             <div className="flex justify-end px-4 md:px-6 pb-3">
               <button
@@ -328,7 +327,6 @@ export default function ProfilePage() {
               </button>
             </div>
           )}
-          */}
         </div>
       </div>
 

@@ -87,68 +87,66 @@ export async function cancelSlotReminder(slot) {
   await LocalNotifications.cancel({ notifications: [{ id: config.id }] })
 }
 
-// [TEST] sendTestNotification - disabled after successful testing on web + Android
-// export async function sendTestNotification() {
-//   if (isNative()) {
-//     const { LocalNotifications } = await import('@capacitor/local-notifications')
-//     await ensureChannel()
-//
-//     const at = new Date(Date.now() + 5000)
-//
-//     await LocalNotifications.schedule({
-//       notifications: [{
-//         id: 999,
-//         title: 'Sandhyavandhanam',
-//         body: 'Test notification - if you see this, push is working!',
-//         schedule: { at },
-//         extra: { test: true },
-//       }],
-//     })
-//
-//     console.log(`Test notification will appear at ${at.toLocaleTimeString()}`)
-//     return true
-//   }
-//
-//   if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-//     new Notification('Sandhyavandhanam', { body: 'Test notification - if you see this, push is working!' })
-//     return true
-//   }
-//
-//   console.log('Test notification: no permission or unsupported platform.')
-//   return false
-// }
+export async function sendTestNotification() {
+  if (isNative()) {
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    await ensureChannel()
 
-// [TEST] scheduleTestNotification - disabled after successful testing
-// export async function scheduleTestNotification(slot) {
-//   const config = SLOT_CONFIG[slot]
-//   const time = SLOT_TIMES[slot]
-//   if (!config || !time) {
-//     console.error(`Unknown slot: ${slot}. Use: morning, afternoon, evening`)
-//     return
-//   }
-//
-//   if (isNative()) {
-//     const { LocalNotifications } = await import('@capacitor/local-notifications')
-//     await ensureChannel()
-//
-//     const at = new Date()
-//     at.setHours(time.hour, time.minute, 0, 0)
-//     if (at <= new Date()) at.setDate(at.getDate() + 1)
-//
-//     await LocalNotifications.schedule({
-//       notifications: [{
-//         id: config.id,
-//         title: config.title,
-//         body: config.body,
-//         schedule: { at },
-//         extra: { slot, test: true },
-//       }],
-//     })
-//
-//     console.log(`Test notification scheduled for ${slot} at ${at.toLocaleTimeString()}`)
-//     return at
-//   }
-//
-//   console.log('Test notification: not on native platform. Use web push via toggle instead.')
-//   return null
-// }
+    const at = new Date(Date.now() + 5000)
+
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: 999,
+        title: 'Sandhyavandhanam',
+        body: 'Test notification - if you see this, push is working!',
+        schedule: { at },
+        extra: { test: true },
+      }],
+    })
+
+    console.log(`Test notification will appear at ${at.toLocaleTimeString()}`)
+    return true
+  }
+
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    new Notification('Sandhyavandhanam', { body: 'Test notification - if you see this, push is working!' })
+    return true
+  }
+
+  console.log('Test notification: no permission or unsupported platform.')
+  return false
+}
+
+export async function scheduleTestNotification(slot) {
+  const config = SLOT_CONFIG[slot]
+  const time = SLOT_TIMES[slot]
+  if (!config || !time) {
+    console.error(`Unknown slot: ${slot}. Use: morning, afternoon, evening`)
+    return
+  }
+
+  if (isNative()) {
+    const { LocalNotifications } = await import('@capacitor/local-notifications')
+    await ensureChannel()
+
+    const at = new Date()
+    at.setHours(time.hour, time.minute, 0, 0)
+    if (at <= new Date()) at.setDate(at.getDate() + 1)
+
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: config.id,
+        title: config.title,
+        body: config.body,
+        schedule: { at },
+        extra: { slot, test: true },
+      }],
+    })
+
+    console.log(`Test notification scheduled for ${slot} at ${at.toLocaleTimeString()}`)
+    return at
+  }
+
+  console.log('Test notification: not on native platform. Use web push via toggle instead.')
+  return null
+}
