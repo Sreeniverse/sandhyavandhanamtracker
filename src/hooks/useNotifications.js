@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { isNative, checkPermission, requestPermission, scheduleAllReminders, cancelAllReminders } from '../utils/notifications'
 import { friendlyError } from '../utils/errors'
+import { logError } from '../utils/logger'
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
 
@@ -21,36 +22,25 @@ function isPushSupported() {
 }
 
 async function setupWebPush(userId) {
-  console.log('[PUSH] setupWebPush called', { userId, isPushSupported: isPushSupported(), hasVapidKey: !!VAPID_PUBLIC_KEY })
-  if (!isPushSupported() || !VAPID_PUBLIC_KEY) {
-    console.warn('[PUSH] Web Push not supported or VAPID key missing')
-    return
-  }
+  if (!isPushSupported() || !VAPID_PUBLIC_KEY) return
   try {
-    console.log('[PUSH] waiting for serviceWorker.ready...')
     const registration = await navigator.serviceWorker.ready
-    console.log('[PUSH] SW ready, checking existing subscription...')
     let subscription = await registration.pushManager.getSubscription()
-    console.log('[PUSH] existing subscription:', subscription ? 'yes' : 'no')
     if (!subscription) {
-      console.log('[PUSH] subscribing with VAPID key...')
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       })
-      console.log('[PUSH] subscribe succeeded')
     }
     const sub = subscription.toJSON()
-    console.log('[PUSH] saving subscription to DB...')
     await supabase.from('push_subscriptions').upsert({
       user_id: userId,
       endpoint: sub.endpoint,
       p256dh: sub.keys.p256dh,
       auth_key: sub.keys.auth,
     }, { onConflict: 'endpoint' })
-    console.log('[PUSH] subscription saved successfully')
   } catch (err) {
-    console.error('[PUSH] Failed to setup web push:', err)
+    logError('setupWebPush', err)
   }
 }
 
@@ -63,7 +53,7 @@ async function deleteWebPushSubscription(userId) {
       await supabase.from('push_subscriptions').delete().eq('user_id', userId)
     }
   } catch (err) {
-    console.error('Failed to delete web push subscription:', err)
+    logError('deleteWebPushSubscription', err)
   }
 }
 
@@ -99,7 +89,7 @@ export function useNotifications(user) {
   // Reschedule local notifications on mount if enabled on native
   useEffect(() => {
     if (!native || !enabled) return
-    scheduleAllReminders().catch(err => console.error('Reschedule failed:', err))
+    scheduleAllReminders().catch(err => logError('rescheduleReminders', err))
   }, [native, enabled])
 
   const toggle = useCallback(async () => {
@@ -152,7 +142,6 @@ export function useNotifications(user) {
       if (native) {
         await scheduleAllReminders()
       } else {
-        console.log('[PUSH] toggle complete, calling setupWebPush...')
         await setupWebPush(user.id)
       }
     }

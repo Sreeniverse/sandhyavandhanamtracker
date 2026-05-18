@@ -1,3 +1,5 @@
+import { logError } from './logger'
+
 const MESSAGES = {
   '42501': 'You do not have permission to perform this action.',
   '23505': 'This entry already exists.',
@@ -32,7 +34,7 @@ export function friendlyError(err) {
 
   // Fallback: don't leak raw DB messages
   if (import.meta.env.DEV) {
-    console.error('Unhandled error:', err)
+    logError('unhandledError', err)
   }
   return 'Something went wrong. Please try again later.'
 }

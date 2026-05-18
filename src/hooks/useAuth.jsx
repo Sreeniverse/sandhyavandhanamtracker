@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, useCallback } from 'rea
 import { supabase } from '../supabase'
 import { isNative } from '../utils/notifications'
 import { friendlyError } from '../utils/errors'
+import { logError } from '../utils/logger'
 
 const AuthContext = createContext(null)
 
@@ -41,7 +42,7 @@ export function AuthProvider({ children }) {
           .single()
           .then(({ data, error }) => {
             if (error) {
-              console.error('Failed to fetch profile:', error)
+              logError('fetchProfile', error)
             }
             setUser({
               id: session.user.id,

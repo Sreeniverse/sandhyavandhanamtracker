@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../supabase'
 import { SLOTS } from '../utils/slots'
 import { friendlyError } from '../utils/errors'
+import { logError } from '../utils/logger'
 
 const PAGE_SIZE = 30
 
@@ -57,7 +58,7 @@ export default function CommunityPage() {
         setHasMore(res.data.length === PAGE_SIZE)
       }
     } catch (err) {
-      console.error(friendlyError(err))
+      logError('communityLoadMore', err)
     } finally {
       setLoadingMore(false)
     }
