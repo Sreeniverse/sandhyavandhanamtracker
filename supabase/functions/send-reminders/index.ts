@@ -10,12 +10,6 @@ const FCM_SERVICE_ACCOUNT_B64 = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON") || "";
 
 webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
-const SLOT_TIMES: Record<string, { hour: number; minute: number }> = {
-  morning: { hour: 9, minute: 0 },
-  afternoon: { hour: 12, minute: 30 },
-  evening: { hour: 18, minute: 30 },
-};
-
 const TITLES: Record<string, string> = {
   morning: "Prathakala Sandhyavandhanam",
   afternoon: "Madhyanika Sandhyavandhanam",
@@ -23,25 +17,11 @@ const TITLES: Record<string, string> = {
 };
 
 function parentBody(slot: string): string {
-  const time = SLOT_TIMES[slot];
-  const label = `${time.hour}:${String(time.minute).padStart(2, "0")}`;
-  const bodies: Record<string, string> = {
-    morning: `Time for your morning prayer (${label}). Open the app!`,
-    afternoon: `Time for your noon prayer (${label}). Open the app!`,
-    evening: `Time for your evening prayer (${label}). Open the app!`,
-  };
-  return bodies[slot];
+  return `Time for your ${TITLES[slot]}. Open app.`;
 }
 
 function sonBody(slot: string, sonName: string): string {
-  const time = SLOT_TIMES[slot];
-  const label = `${time.hour}:${String(time.minute).padStart(2, "0")}`;
-  const bodies: Record<string, string> = {
-    morning: `${sonName}'s morning prayer (${label}) is not yet done.`,
-    afternoon: `${sonName}'s noon prayer (${label}) is not yet done.`,
-    evening: `${sonName}'s evening prayer (${label}) is not yet done.`,
-  };
-  return bodies[slot];
+  return `${sonName} time for your ${TITLES[slot]}. Open app.`;
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
