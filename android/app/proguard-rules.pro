@@ -19,3 +19,13 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Firebase
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+
+# Capacitor Push Notifications
+-keep class com.capacitorjs.plugins.pushnotifications.** { *; }
+
+-keepattributes *Annotation*
+-keepattributes Signature

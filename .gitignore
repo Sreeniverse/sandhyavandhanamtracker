@@ -16,4 +16,6 @@ android/captures/
 *.keystore
 android/local.properties
 android/key.properties
+android/app/google-services.json
 supabase/.temp/
+*-service-account.json
