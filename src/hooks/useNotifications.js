@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { isNative, checkPermission, requestPermission, scheduleAllReminders, cancelAllReminders } from '../utils/notifications'
+import { registerFCM, unregisterFCM } from '../utils/pushAndroid'
 import { friendlyError } from '../utils/errors'
 import { logError } from '../utils/logger'
 
@@ -38,6 +39,7 @@ async function setupWebPush(userId) {
       endpoint: sub.endpoint,
       p256dh: sub.keys.p256dh,
       auth_key: sub.keys.auth,
+      platform: 'web',
     }, { onConflict: 'endpoint' })
   } catch (err) {
     logError('setupWebPush', err)
@@ -50,7 +52,7 @@ async function deleteWebPushSubscription(userId) {
     const subscription = await registration.pushManager.getSubscription()
     if (subscription) {
       await subscription.unsubscribe()
-      await supabase.from('push_subscriptions').delete().eq('user_id', userId)
+      await supabase.from('push_subscriptions').delete().match({ user_id: userId, platform: 'web' })
     }
   } catch (err) {
     logError('deleteWebPushSubscription', err)
@@ -58,9 +60,10 @@ async function deleteWebPushSubscription(userId) {
 }
 
 async function savePref(userId, enabled) {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const { error } = await supabase
     .from('notification_preferences')
-    .upsert({ user_id: userId, enabled }, { onConflict: 'user_id' })
+    .upsert({ user_id: userId, enabled, timezone }, { onConflict: 'user_id' })
   return error
 }
 
@@ -127,6 +130,7 @@ export function useNotifications(user) {
       // Disabling push notifications
       if (native) {
         cancelAllReminders()
+        await unregisterFCM(user.id)
       } else {
         await deleteWebPushSubscription(user.id)
       }
@@ -142,7 +146,17 @@ export function useNotifications(user) {
 
     if (next) {
       if (native) {
+        console.log('[NotifToggle] scheduling local reminders...')
         await scheduleAllReminders()
+        console.log('[NotifToggle] local reminders scheduled, now calling registerFCM...')
+        try {
+          await registerFCM(user.id)
+          console.log('[NotifToggle] registerFCM completed successfully')
+        } catch (err) {
+          logError('registerFCM', err)
+          console.error('[NotifToggle] FCM registration failed:', err.message)
+          setError('Push notification setup failed. Please try toggling off and on again.')
+        }
       } else {
         await setupWebPush(user.id)
       }

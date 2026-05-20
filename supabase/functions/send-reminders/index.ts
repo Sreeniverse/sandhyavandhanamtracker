@@ -1,21 +1,19 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { buildPushPayload } from "npm:@block65/webcrypto-web-push@1.0.2";
+import webpush from "npm:web-push";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
 const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_EMAIL = Deno.env.get("VAPID_EMAIL") || "mailto:sreeni@asthikasamaj.com";
-// const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY") || "";
-// const SENDER_EMAIL = Deno.env.get("SENDER_EMAIL") || "sreeni@asthikasamaj.com";
-// const APP_URL = Deno.env.get("APP_URL") || "https://nithyakarmatracker.netlify.app";
+const FCM_SERVICE_ACCOUNT_B64 = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON") || "";
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
-const vapidKeys = {
-  subject: VAPID_EMAIL,
-  publicKey: VAPID_PUBLIC_KEY,
-  privateKey: VAPID_PRIVATE_KEY,
+const SLOT_TIMES: Record<string, { hour: number; minute: number }> = {
+  morning: { hour: 9, minute: 0 },
+  afternoon: { hour: 12, minute: 30 },
+  evening: { hour: 18, minute: 30 },
 };
 
 const TITLES: Record<string, string> = {
@@ -24,222 +22,384 @@ const TITLES: Record<string, string> = {
   evening: "Saayamkala Sandhyavandhanam",
 };
 
-const BODIES: Record<string, string> = {
-  morning: "Time for your morning prayer. Open the app!",
-  afternoon: "Time for your noon prayer. Open the app!",
-  evening: "Time for your evening prayer. Open the app!",
-};
+function parentBody(slot: string): string {
+  const time = SLOT_TIMES[slot];
+  const label = `${time.hour}:${String(time.minute).padStart(2, "0")}`;
+  const bodies: Record<string, string> = {
+    morning: `Time for your morning prayer (${label}). Open the app!`,
+    afternoon: `Time for your noon prayer (${label}). Open the app!`,
+    evening: `Time for your evening prayer (${label}). Open the app!`,
+  };
+  return bodies[slot];
+}
 
-const TIME_WINDOWS: Record<string, string> = {
-  morning: "8:30 - 10:30 AM IST",
-  afternoon: "11:30 AM - 1:00 PM IST",
-  evening: "6:30 - 8:00 PM IST",
-};
+function sonBody(slot: string, sonName: string): string {
+  const time = SLOT_TIMES[slot];
+  const label = `${time.hour}:${String(time.minute).padStart(2, "0")}`;
+  const bodies: Record<string, string> = {
+    morning: `${sonName}'s morning prayer (${label}) is not yet done.`,
+    afternoon: `${sonName}'s noon prayer (${label}) is not yet done.`,
+    evening: `${sonName}'s evening prayer (${label}) is not yet done.`,
+  };
+  return bodies[slot];
+}
 
-const SLOT_COLORS: Record<string, string> = {
-  morning: "#F59E0B",
-  afternoon: "#EF4444",
-  evening: "#6366F1",
-};
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-function buildEmailHtml(name: string, slot: string): string {
-  const color = SLOT_COLORS[slot] || "#F59E0B";
-  const title = TITLES[slot];
-  const timeWindow = TIME_WINDOWS[slot];
+let fcmAccessToken: string | null = null;
+let fcmTokenExpiry = 0;
 
-  return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#FFF7ED;font-family:system-ui,-apple-system,sans-serif;">
-  <div style="max-width:480px;margin:0 auto;padding:32px 20px;">
-    <div style="text-align:center;padding-bottom:20px;border-bottom:2px solid ${color};">
-      <h1 style="font-size:22px;color:#1a1a1a;margin:0;">Sandhyavandhanam</h1>
-    </div>
-    <div style="padding:24px 0;text-align:center;">
-      <p style="font-size:16px;color:#666;margin:0 0 8px;">Namaste, <strong style="color:#1a1a1a;">${name}</strong></p>
-      <p style="font-size:14px;color:#888;margin:0 0 24px;">It's time for your ritual practice</p>
-      <div style="background:white;border-radius:12px;padding:24px;border:1px solid #E5E7EB;">
-        <h2 style="font-size:20px;color:${color};margin:0 0 8px;">${title}</h2>
-        <p style="font-size:14px;color:#666;margin:0;">Time window: ${timeWindow}</p>
-      </div>
-    </div>
-    <div style="text-align:center;padding-top:16px;">
-      <a href="${APP_URL}" style="display:inline-block;background:${color};color:white;text-decoration:none;padding:12px 32px;border-radius:24px;font-weight:700;font-size:14px;">Open App</a>
-    </div>
-    <p style="font-size:11px;color:#aaa;text-align:center;margin-top:32px;">
-      You received this because email reminders are enabled for your account.
-      Manage preferences in the app under Profile &gt; Preferences.
-    </p>
-  </div>
-</body></html>`;
+function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function bytesToBase64Url(bytes: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function getFCMAccessToken(): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  if (fcmAccessToken && now < fcmTokenExpiry - 60) return fcmAccessToken;
+
+  if (!FCM_SERVICE_ACCOUNT_B64) throw new Error("FCM_SERVICE_ACCOUNT_JSON not configured");
+
+  const serviceAccount = JSON.parse(atob(FCM_SERVICE_ACCOUNT_B64));
+  const privateKey = serviceAccount.private_key;
+  const clientEmail = serviceAccount.client_email;
+  const projectId = serviceAccount.project_id;
+
+  const pemBody = privateKey
+    .replace("-----BEGIN PRIVATE KEY-----", "")
+    .replace("-----END PRIVATE KEY-----", "")
+    .replace(/\s/g, "");
+  const keyBytes = base64ToBytes(pemBody);
+
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    keyBytes,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+
+  const header = { alg: "RS256", typ: "JWT" };
+  const nowSec = Math.floor(Date.now() / 1000);
+  const claim = {
+    iss: clientEmail,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token",
+    exp: nowSec + 3600,
+    iat: nowSec,
+  };
+
+  const headerB64 = bytesToBase64Url(new TextEncoder().encode(JSON.stringify(header)));
+  const claimB64 = bytesToBase64Url(new TextEncoder().encode(JSON.stringify(claim)));
+  const toSign = `${headerB64}.${claimB64}`;
+
+  const sig = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    new TextEncoder().encode(toSign),
+  );
+  const sigB64 = bytesToBase64Url(new Uint8Array(sig));
+  const jwt = `${toSign}.${sigB64}`;
+
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`FCM OAuth failed: ${res.status} ${err}`);
+  }
+
+  const data = await res.json();
+  fcmAccessToken = data.access_token;
+  fcmTokenExpiry = now + (data.expires_in || 3600);
+  return fcmAccessToken;
+}
+
+async function sendFCM(
+  token: string,
+  title: string,
+  body: string,
+  url: string,
+  slot: string,
+): Promise<boolean> {
+  try {
+    const accessToken = await getFCMAccessToken();
+    const serviceAccount = JSON.parse(atob(FCM_SERVICE_ACCOUNT_B64));
+    const projectId = serviceAccount.project_id;
+
+    const message: Record<string, unknown> = {
+      token,
+      notification: { title, body },
+      android: {
+        priority: "high",
+        notification: {
+          channel_id: "reminders",
+          icon: "ic_stat_logo",
+          color: "#FF9933",
+        },
+      },
+      data: { url, slot },
+    };
+
+    const res = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message }),
+      },
+    );
+
+    if (res.ok) return true;
+
+    const err = await res.json();
+    const errorCode = (err as any)?.error?.details?.[0]?.errorCode || "";
+    if (errorCode === "UNREGISTERED" || errorCode === "SENDER_ID_MISMATCH") {
+      await supabase.from("push_subscriptions").delete().eq("endpoint", token);
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+async function sendWebPush(
+  subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
+  title: string,
+  body: string,
+  url: string,
+): Promise<boolean> {
+  try {
+    await webpush.sendNotification(subscription, JSON.stringify({ title, body, url }));
+    return true;
+  } catch (err: any) {
+    if (err?.statusCode === 410 || err?.statusCode === 404) {
+      await supabase.from("push_subscriptions").delete().eq("endpoint", subscription.endpoint);
+    }
+    return false;
+  }
+}
+
+function getLocalHour(date: Date, timezone: string): number {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      hour12: false,
+      timeZone: timezone,
+    }).formatToParts(date);
+    return parseInt(parts.find((p) => p.type === "hour")!.value);
+  } catch {
+    return -1;
+  }
+}
+
+function getLocalMinute(date: Date, timezone: string): number {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      minute: "numeric",
+      timeZone: timezone,
+    }).formatToParts(date);
+    return parseInt(parts.find((p) => p.type === "minute")!.value);
+  } catch {
+    return -1;
+  }
+}
+
+function slotForUser(now: Date, timezone: string): string | null {
+  const hour = getLocalHour(now, timezone);
+  const minute = getLocalMinute(now, timezone);
+  if (hour < 0) return null;
+
+  // 9:00-9:59 AM
+  if (hour === 9) return "morning";
+  // 12:30-12:59 PM
+  if (hour === 12 && minute >= 30) return "afternoon";
+  // 6:30-6:59 PM
+  if (hour === 18 && minute >= 30) return "evening";
+
+  return null;
 }
 
 Deno.serve(async (req: Request) => {
   const authHeader = req.headers.get("Authorization");
   const cronSecret = Deno.env.get("CRON_SECRET") || "";
 
-  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
-    // Authenticated cron call
-  } else if (authHeader && authHeader.startsWith("Bearer ey")) {
-    // Dashboard or other Supabase auth token
-  } else if (authHeader) {
+  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  const url = new URL(req.url);
+  const forceTest = url.searchParams.get("force") === "true";
+
   try {
     const now = new Date();
-    const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-    const istMs = utcMs + (5 * 60 + 30) * 60000;
-    const istDate = new Date(istMs);
-    const istHour = istDate.getHours();
-    const istMinute = istDate.getMinutes();
+    const today = now.toISOString().split("T")[0];
 
-    const isMorning = istHour >= 8 && istHour < 11;
-    const isAfternoon = istHour >= 11 && istHour < 13;
-    const isEvening = istHour >= 18 && istHour < 20;
+    const { data: enabledPrefs } = await supabase
+      .from("notification_preferences")
+      .select("user_id, timezone")
+      .eq("enabled", true);
 
-    const slotsToCheck: string[] = [];
-    if (isMorning) slotsToCheck.push("morning");
-    if (isAfternoon) slotsToCheck.push("afternoon");
-    if (isEvening) slotsToCheck.push("evening");
+    const enabledUsers = enabledPrefs || [];
 
-    if (slotsToCheck.length === 0) {
-      return new Response(JSON.stringify({ message: "Outside reminder windows", istHour, istMinute }), {
+    if (enabledUsers.length === 0) {
+      return new Response(JSON.stringify({ message: "No users with notifications enabled" }), {
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    // Determine which slot each user is in based on their timezone
+    const userSlots = new Map<string, string>();
+    for (const u of enabledUsers) {
+      const tz = u.timezone || "Asia/Kolkata";
+      const slot = forceTest ? null : slotForUser(now, tz);
+      if (forceTest || slot) {
+        userSlots.set(u.user_id, slot);
+      }
+    }
 
-    // --- PUSH NOTIFICATIONS ---
-    let pushSent = 0;
-    let pushFailed = 0;
+    if (userSlots.size === 0) {
+      return new Response(JSON.stringify({ message: "No users in reminder windows" }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const pushUserIds = [...userSlots.keys()];
 
     const { data: subscriptions } = await supabase
       .from("push_subscriptions")
-      .select("user_id, endpoint, p256dh, auth_key, notification_preferences(enabled)")
-      .eq("notification_preferences.enabled", true);
+      .select("user_id, endpoint, p256dh, auth_key, platform")
+      .in("user_id", pushUserIds);
 
-    const enabledSubs = (subscriptions || []).filter(
-      (s: any) => s.notification_preferences?.enabled
-    );
+    const enabledSubs = subscriptions || [];
 
-    if (enabledSubs.length > 0) {
-      const pushUserIds = [...new Set(enabledSubs.map((s: any) => s.user_id))];
-      const { data: pushActivities } = await supabase
+    if (enabledSubs.length === 0) {
+      return new Response(JSON.stringify({ message: "No push subscriptions found" }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Fetch own activities for these users
+    const { data: ownActivities } = await supabase
+      .from("activities")
+      .select("user_id, morning_done, afternoon_done, evening_done")
+      .in("user_id", pushUserIds)
+      .eq("date", today)
+      .is("profile_for", null);
+
+    const ownActivityMap = new Map<string, any>();
+    for (const act of ownActivities || []) {
+      ownActivityMap.set(act.user_id, act);
+    }
+
+    // Fetch family members and their activities
+    const { data: allFamilyMembers } = await supabase
+      .from("family_members")
+      .select("id, parent_id, name")
+      .in("parent_id", pushUserIds);
+
+    const familyByParent = new Map<string, { id: string; name: string }[]>();
+    for (const fm of allFamilyMembers || []) {
+      const list = familyByParent.get(fm.parent_id) || [];
+      list.push({ id: fm.id, name: fm.name });
+      familyByParent.set(fm.parent_id, list);
+    }
+
+    const allFamilyIds = (allFamilyMembers || []).map((fm: any) => fm.id);
+    let familyActivityMap = new Map<string, Map<string, any>>();
+
+    if (allFamilyIds.length > 0) {
+      const { data: famActivities } = await supabase
         .from("activities")
-        .select("user_id, morning_done, afternoon_done, evening_done")
+        .select("user_id, profile_for, morning_done, afternoon_done, evening_done")
         .in("user_id", pushUserIds)
+        .in("profile_for", allFamilyIds)
         .eq("date", today);
 
-      const activityMap = new Map();
-      for (const act of pushActivities || []) {
-        activityMap.set(act.user_id, act);
+      for (const act of famActivities || []) {
+        const userMap = familyActivityMap.get(act.user_id) || new Map();
+        userMap.set(act.profile_for, act);
+        familyActivityMap.set(act.user_id, userMap);
       }
+    }
 
-      for (const sub of enabledSubs) {
-        const activity = activityMap.get(sub.user_id);
-        for (const slot of slotsToCheck) {
-          const done = activity ? activity[`${slot}_done`] : false;
-          if (!done) {
-            try {
-              const pushSubscription = {
-                endpoint: sub.endpoint,
-                expirationTime: null,
-                keys: { p256dh: sub.p256dh, auth: sub.auth_key },
-              };
-              const message = {
-                data: JSON.stringify({ title: TITLES[slot], body: BODIES[slot], url: "/" }),
-                options: { ttl: 86400 },
-              };
-              const payload = await buildPushPayload(message, pushSubscription, vapidKeys);
-              const response = await fetch(pushSubscription.endpoint, payload);
+    let fcmSent = 0, fcmFailed = 0, webSent = 0, webFailed = 0;
 
-              if (response.status >= 200 && response.status < 300) {
-                pushSent++;
-              } else if (response.status === 410 || response.status === 404) {
-                await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
-                pushFailed++;
-              } else {
-                pushFailed++;
-              }
-            } catch {
-              pushFailed++;
+    for (const sub of enabledSubs) {
+      const userSlot = userSlots.get(sub.user_id);
+      const slotsToCheck = forceTest ? ["morning", "afternoon", "evening"] : [userSlot];
+
+      for (const slot of slotsToCheck) {
+        if (!slot) continue;
+
+        const own = ownActivityMap.get(sub.user_id);
+        const ownDone = own ? own[`${slot}_done`] : false;
+
+        let title = "";
+        let body = "";
+
+        if (!forceTest && ownDone) {
+          // Parent's ritual is done - check sons
+          const sons = familyByParent.get(sub.user_id) || [];
+          const famMap = familyActivityMap.get(sub.user_id) || new Map();
+
+          let foundPendingSon = false;
+          for (const son of sons) {
+            const sonAct = famMap.get(son.id);
+            const sonDone = sonAct ? sonAct[`${slot}_done`] : false;
+            if (!sonDone) {
+              title = TITLES[slot];
+              body = sonBody(slot, son.name);
+              foundPendingSon = true;
+              break;
             }
           }
+          if (!foundPendingSon) continue;
+        } else {
+          title = TITLES[slot];
+          body = parentBody(slot);
+        }
+
+        const url = "/";
+
+        if (sub.platform === "android") {
+          const ok = await sendFCM(sub.endpoint, title, body, url, slot);
+          if (ok) fcmSent++;
+          else fcmFailed++;
+        } else {
+          const pushSub = {
+            endpoint: sub.endpoint,
+            keys: { p256dh: sub.p256dh, auth: sub.auth_key },
+          };
+          const ok = await sendWebPush(pushSub, title, body, url);
+          if (ok) webSent++;
+          else webFailed++;
         }
       }
     }
 
-    // --- EMAIL NOTIFICATIONS (commented out - client opted out) ---
-    // let emailsSent = 0;
-    // let emailsFailed = 0;
-    //
-    // if (BREVO_API_KEY) {
-    //   const { data: emailPrefs } = await supabase
-    //     .from("notification_preferences")
-    //     .select("user_id, profiles(name, email)")
-    //     .eq("email_enabled", true);
-    //
-    //   if (emailPrefs && emailPrefs.length > 0) {
-    //     const emailUserIds = emailPrefs.map((e: any) => e.user_id);
-    //     const { data: emailActivities } = await supabase
-    //       .from("activities")
-    //       .select("user_id, morning_done, afternoon_done, evening_done")
-    //       .in("user_id", emailUserIds)
-    //       .eq("date", today);
-    //
-    //     const emailActivityMap = new Map();
-    //     for (const act of emailActivities || []) {
-    //       emailActivityMap.set(act.user_id, act);
-    //     }
-    //
-    //     for (const ep of emailPrefs) {
-    //       const userName = ep.profiles?.name || "Devotee";
-    //       const userEmail = ep.profiles?.email;
-    //       if (!userEmail) continue;
-    //
-    //       const activity = emailActivityMap.get(ep.user_id);
-    //       for (const slot of slotsToCheck) {
-    //         const done = activity ? activity[`${slot}_done`] : false;
-    //         if (!done) {
-    //           try {
-    //             const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-    //               method: "POST",
-    //               headers: {
-    //                 "Content-Type": "application/json",
-    //                 "api-key": BREVO_API_KEY,
-    //               },
-    //               body: JSON.stringify({
-    //                 sender: { name: "Sandhyavandhanam", email: SENDER_EMAIL },
-    //                 to: [{ email: userEmail, name: userName }],
-    //                 subject: `Reminder: ${TITLES[slot]}`,
-    //                 htmlContent: buildEmailHtml(userName, slot),
-    //               }),
-    //             });
-    //
-    //             if (res.ok) {
-    //               emailsSent++;
-    //             } else {
-    //               const errBody = await res.text();
-    //               console.error(`Brevo email failed for ${userEmail}:`, res.status, errBody);
-    //               emailsFailed++;
-    //             }
-    //           } catch (err) {
-    //             console.error(`Brevo email error for ${userEmail}:`, err);
-    //             emailsFailed++;
-    //           }
-    //         }
-    //       }
-    //     }
-    //   }
-    // }
-
     return new Response(JSON.stringify({
       message: "Reminders processed",
-      push: { sent: pushSent, failed: pushFailed },
-      slots: slotsToCheck,
-      istHour,
-      istMinute,
+      fcm: { sent: fcmSent, failed: fcmFailed },
+      webpush: { sent: webSent, failed: webFailed },
+      usersProcessed: pushUserIds.length,
     }), {
       headers: { "Content-Type": "application/json" },
     });
