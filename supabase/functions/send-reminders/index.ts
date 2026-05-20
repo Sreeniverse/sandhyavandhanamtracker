@@ -245,9 +245,6 @@ Deno.serve(async (req: Request) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const url = new URL(req.url);
-  const forceTest = url.searchParams.get("force") === "true";
-
   try {
     const now = new Date();
     const today = now.toISOString().split("T")[0];
@@ -269,8 +266,8 @@ Deno.serve(async (req: Request) => {
     const userSlots = new Map<string, string>();
     for (const u of enabledUsers) {
       const tz = u.timezone || "Asia/Kolkata";
-      const slot = forceTest ? null : slotForUser(now, tz);
-      if (forceTest || slot) {
+      const slot = slotForUser(now, tz);
+      if (slot) {
         userSlots.set(u.user_id, slot);
       }
     }
@@ -323,17 +320,20 @@ Deno.serve(async (req: Request) => {
     }
 
     const allFamilyIds = (allFamilyMembers || []).map((fm: any) => fm.id);
+    let famActivities: any[] = [];
     let familyActivityMap = new Map<string, Map<string, any>>();
 
     if (allFamilyIds.length > 0) {
-      const { data: famActivities } = await supabase
+      const { data: famData } = await supabase
         .from("activities")
         .select("user_id, profile_for, morning_done, afternoon_done, evening_done")
         .in("user_id", pushUserIds)
         .in("profile_for", allFamilyIds)
         .eq("date", today);
 
-      for (const act of famActivities || []) {
+      famActivities = famData || [];
+
+      for (const act of famActivities) {
         const userMap = familyActivityMap.get(act.user_id) || new Map();
         userMap.set(act.profile_for, act);
         familyActivityMap.set(act.user_id, userMap);
@@ -344,54 +344,48 @@ Deno.serve(async (req: Request) => {
 
     for (const sub of enabledSubs) {
       const userSlot = userSlots.get(sub.user_id);
-      const slotsToCheck = forceTest ? ["morning", "afternoon", "evening"] : [userSlot];
+      if (!userSlot) continue;
 
-      for (const slot of slotsToCheck) {
-        if (!slot) continue;
+      const own = ownActivityMap.get(sub.user_id);
+      const ownDone = own ? own[`${userSlot}_done`] : false;
 
-        const own = ownActivityMap.get(sub.user_id);
-        const ownDone = own ? own[`${slot}_done`] : false;
+      let title = "";
+      let body = "";
 
-        let title = "";
-        let body = "";
+      if (ownDone) {
+        // Own ritual is done - check sons
+        const sons = familyByParent.get(sub.user_id) || [];
+        const famMap = familyActivityMap.get(sub.user_id) || new Map();
 
-        if (!forceTest && ownDone) {
-          // Parent's ritual is done - check sons
-          const sons = familyByParent.get(sub.user_id) || [];
-          const famMap = familyActivityMap.get(sub.user_id) || new Map();
-
-          let foundPendingSon = false;
-          for (const son of sons) {
-            const sonAct = famMap.get(son.id);
-            const sonDone = sonAct ? sonAct[`${slot}_done`] : false;
-            if (!sonDone) {
-              title = TITLES[slot];
-              body = sonBody(slot, son.name);
-              foundPendingSon = true;
-              break;
-            }
+        let foundPendingSon = false;
+        for (const son of sons) {
+          const sonAct = famMap.get(son.id);
+          const sonDone = sonAct ? sonAct[`${userSlot}_done`] : false;
+          if (!sonDone) {
+            title = TITLES[userSlot];
+            body = sonBody(userSlot, son.name);
+            foundPendingSon = true;
+            break;
           }
-          if (!foundPendingSon) continue;
-        } else {
-          title = TITLES[slot];
-          body = parentBody(slot);
         }
+        if (!foundPendingSon) continue; // All done for this slot
+      } else {
+        title = TITLES[userSlot];
+        body = parentBody(userSlot);
+      }
 
-        const url = "/";
-
-        if (sub.platform === "android") {
-          const ok = await sendFCM(sub.endpoint, title, body, url, slot);
-          if (ok) fcmSent++;
-          else fcmFailed++;
-        } else {
-          const pushSub = {
-            endpoint: sub.endpoint,
-            keys: { p256dh: sub.p256dh, auth: sub.auth_key },
-          };
-          const ok = await sendWebPush(pushSub, title, body, url);
-          if (ok) webSent++;
-          else webFailed++;
-        }
+      if (sub.platform === "android") {
+        const ok = await sendFCM(sub.endpoint, title, body, "/", userSlot);
+        if (ok) fcmSent++;
+        else fcmFailed++;
+      } else {
+        const pushSub = {
+          endpoint: sub.endpoint,
+          keys: { p256dh: sub.p256dh, auth: sub.auth_key },
+        };
+        const ok = await sendWebPush(pushSub, title, body, "/");
+        if (ok) webSent++;
+        else webFailed++;
       }
     }
 
