@@ -7,6 +7,7 @@ const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
 const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_EMAIL = Deno.env.get("VAPID_EMAIL") || "mailto:sreeni@asthikasamaj.com";
 const FCM_SERVICE_ACCOUNT_B64 = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON") || "";
+const DEFAULT_TIMEZONE = "Asia/Kolkata";
 
 webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
@@ -202,6 +203,24 @@ function getLocalMinute(date: Date, timezone: string): number {
   }
 }
 
+function getLocalDate(date: Date, timezone: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: timezone,
+    }).formatToParts(date);
+
+    const year = parts.find((p) => p.type === "year")!.value;
+    const month = parts.find((p) => p.type === "month")!.value;
+    const day = parts.find((p) => p.type === "day")!.value;
+    return `${year}-${month}-${day}`;
+  } catch {
+    return date.toISOString().split("T")[0];
+  }
+}
+
 function slotForUser(now: Date, timezone: string): string | null {
   const hour = getLocalHour(now, timezone);
   const minute = getLocalMinute(now, timezone);
@@ -217,6 +236,10 @@ function slotForUser(now: Date, timezone: string): string | null {
   return null;
 }
 
+function endpointKey(endpoint: string): string {
+  return endpoint.slice(0, 500);
+}
+
 Deno.serve(async (req: Request) => {
   const authHeader = req.headers.get("Authorization");
   const cronSecret = Deno.env.get("CRON_SECRET") || "";
@@ -227,7 +250,6 @@ Deno.serve(async (req: Request) => {
 
   try {
     const now = new Date();
-    const today = now.toISOString().split("T")[0];
 
     const { data: enabledPrefs } = await supabase
       .from("notification_preferences")
@@ -244,11 +266,13 @@ Deno.serve(async (req: Request) => {
 
     // Determine which slot each user is in based on their timezone
     const userSlots = new Map<string, string>();
+    const userDates = new Map<string, string>();
     for (const u of enabledUsers) {
-      const tz = u.timezone || "Asia/Kolkata";
+      const tz = u.timezone || DEFAULT_TIMEZONE;
       const slot = slotForUser(now, tz);
       if (slot) {
         userSlots.set(u.user_id, slot);
+        userDates.set(u.user_id, getLocalDate(now, tz));
       }
     }
 
@@ -273,17 +297,22 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Fetch own activities for these users
+    const reminderDates = [...new Set(userDates.values())];
+
+    // Fetch own activities for these users. Users may be in different local dates,
+    // so filter in code after fetching the small date set.
     const { data: ownActivities } = await supabase
       .from("activities")
-      .select("user_id, morning_done, afternoon_done, evening_done")
+      .select("user_id, date, morning_done, afternoon_done, evening_done")
       .in("user_id", pushUserIds)
-      .eq("date", today)
+      .in("date", reminderDates)
       .is("profile_for", null);
 
     const ownActivityMap = new Map<string, any>();
     for (const act of ownActivities || []) {
-      ownActivityMap.set(act.user_id, act);
+      if (act.date === userDates.get(act.user_id)) {
+        ownActivityMap.set(act.user_id, act);
+      }
     }
 
     // Fetch family members and their activities
@@ -306,14 +335,15 @@ Deno.serve(async (req: Request) => {
     if (allFamilyIds.length > 0) {
       const { data: famData } = await supabase
         .from("activities")
-        .select("user_id, profile_for, morning_done, afternoon_done, evening_done")
+        .select("user_id, date, profile_for, morning_done, afternoon_done, evening_done")
         .in("user_id", pushUserIds)
         .in("profile_for", allFamilyIds)
-        .eq("date", today);
+        .in("date", reminderDates);
 
       famActivities = famData || [];
 
       for (const act of famActivities) {
+        if (act.date !== userDates.get(act.user_id)) continue;
         const userMap = familyActivityMap.get(act.user_id) || new Map();
         userMap.set(act.profile_for, act);
         familyActivityMap.set(act.user_id, userMap);
@@ -325,6 +355,8 @@ Deno.serve(async (req: Request) => {
     for (const sub of enabledSubs) {
       const userSlot = userSlots.get(sub.user_id);
       if (!userSlot) continue;
+      const reminderDate = userDates.get(sub.user_id);
+      if (!reminderDate) continue;
 
       const own = ownActivityMap.get(sub.user_id);
       const ownDone = own ? own[`${userSlot}_done`] : false;
@@ -354,18 +386,39 @@ Deno.serve(async (req: Request) => {
         body = parentBody(userSlot);
       }
 
+      const delivery = {
+        user_id: sub.user_id,
+        reminder_date: reminderDate,
+        slot: userSlot,
+        platform: sub.platform || "web",
+        endpoint: endpointKey(sub.endpoint),
+      };
+
+      const { data: existingDelivery } = await supabase
+        .from("notification_deliveries")
+        .select("id")
+        .match(delivery)
+        .maybeSingle();
+
+      if (existingDelivery) continue;
+
+      let sent = false;
       if (sub.platform === "android") {
-        const ok = await sendFCM(sub.endpoint, title, body, "/", userSlot);
-        if (ok) fcmSent++;
+        sent = await sendFCM(sub.endpoint, title, body, "/", userSlot);
+        if (sent) fcmSent++;
         else fcmFailed++;
       } else {
         const pushSub = {
           endpoint: sub.endpoint,
           keys: { p256dh: sub.p256dh, auth: sub.auth_key },
         };
-        const ok = await sendWebPush(pushSub, title, body, "/");
-        if (ok) webSent++;
+        sent = await sendWebPush(pushSub, title, body, "/");
+        if (sent) webSent++;
         else webFailed++;
+      }
+
+      if (sent) {
+        await supabase.from("notification_deliveries").insert(delivery);
       }
     }
 

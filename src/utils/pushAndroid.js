@@ -34,19 +34,40 @@ export async function registerFCM(userId) {
 
     console.log(`[${TAG}] registering for FCM token...`)
     const token = await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('FCM registration timed out')), 15000)
-      PushNotifications.addListener('registration', (data) => {
-        console.log(`[${TAG}] registration event: token=${data.value.substring(0, 30)}...`)
+      let registrationHandle = null
+      let errorHandle = null
+      const cleanup = () => {
+        registrationHandle?.remove()
+        errorHandle?.remove()
+      }
+      const timeout = setTimeout(() => {
+        cleanup()
+        reject(new Error('FCM registration timed out'))
+      }, 15000)
+
+      Promise.all([
+        PushNotifications.addListener('registration', (data) => {
+          console.log(`[${TAG}] registration event: token=${data.value.substring(0, 30)}...`)
+          clearTimeout(timeout)
+          cleanup()
+          resolve(data.value)
+        }),
+        PushNotifications.addListener('registrationError', (err) => {
+          console.log(`[${TAG}] registrationError event: ${JSON.stringify(err)}`)
+          clearTimeout(timeout)
+          cleanup()
+          reject(new Error(err.error || 'FCM registration failed'))
+        }),
+      ]).then(([regHandle, errHandle]) => {
+        registrationHandle = regHandle
+        errorHandle = errHandle
+        PushNotifications.register()
+        console.log(`[${TAG}] PushNotifications.register() called, waiting for token...`)
+      }).catch((err) => {
         clearTimeout(timeout)
-        resolve(data.value)
+        cleanup()
+        reject(err)
       })
-      PushNotifications.addListener('registrationError', (err) => {
-        console.log(`[${TAG}] registrationError event: ${JSON.stringify(err)}`)
-        clearTimeout(timeout)
-        reject(new Error(err.error || 'FCM registration failed'))
-      })
-      PushNotifications.register()
-      console.log(`[${TAG}] PushNotifications.register() called, waiting for token...`)
     })
 
     console.log(`[${TAG}] got FCM token: ${token.substring(0, 30)}...`)

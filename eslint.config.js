@@ -32,6 +32,10 @@ export default defineConfig([
     languageOptions: { globals: globals.node },
   },
   {
+    files: ['netlify/functions/**/*.js'],
+    languageOptions: { globals: globals.node },
+  },
+  {
     files: ['**/__tests__/**/*.{js,jsx}', '**/*.test.{js,jsx}'],
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },

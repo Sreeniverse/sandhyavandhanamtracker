@@ -51,23 +51,25 @@ export async function scheduleAllReminders() {
 
   await ensureChannel()
 
-  const notifications = Object.entries(SLOT_CONFIG).map(([slot, config]) => {
-    const time = SLOT_TIMES[slot]
-    const now = new Date()
-    const at = new Date()
-    at.setHours(time.hour, time.minute, 0, 0)
-    if (at <= now) at.setDate(at.getDate() + 1)
-
-    return {
-      id: config.id,
-      title: config.title,
-      body: config.body,
-      schedule: { every: 'day', at },
-      extra: { slot },
-    }
-  })
+  const notifications = Object.keys(SLOT_CONFIG).map(slot => buildSlotNotification(slot))
 
   await LocalNotifications.schedule({ notifications })
+}
+
+function buildSlotNotification(slot, startDate = new Date()) {
+  const config = SLOT_CONFIG[slot]
+  const time = SLOT_TIMES[slot]
+  const at = new Date(startDate)
+  at.setHours(time.hour, time.minute, 0, 0)
+  if (at <= new Date()) at.setDate(at.getDate() + 1)
+
+  return {
+    id: config.id,
+    title: config.title,
+    body: config.body,
+    schedule: { every: 'day', at },
+    extra: { slot },
+  }
 }
 
 export async function cancelAllReminders() {
@@ -85,6 +87,22 @@ export async function cancelSlotReminder(slot) {
   if (!config) return
 
   await LocalNotifications.cancel({ notifications: [{ id: config.id }] })
+}
+
+export async function skipSlotReminderToday(slot) {
+  if (!isNative()) return
+  const { LocalNotifications } = await import('@capacitor/local-notifications')
+  const config = SLOT_CONFIG[slot]
+  if (!config) return
+
+  await ensureChannel()
+  await LocalNotifications.cancel({ notifications: [{ id: config.id }] })
+
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  await LocalNotifications.schedule({
+    notifications: [buildSlotNotification(slot, tomorrow)],
+  })
 }
 
 export async function sendTestNotification() {

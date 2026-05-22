@@ -7,6 +7,7 @@ dist/
 .cache/
 android/app/build/
 android/.gradle/
+android/.idea/
 android/build/
 android/captures/
 .android/
@@ -16,6 +17,9 @@ android/captures/
 *.keystore
 android/local.properties
 android/key.properties
+android/logcat.txt
 android/app/google-services.json
+android/app/service-account.json
+android/supabase/
 supabase/.temp/
 *-service-account.json

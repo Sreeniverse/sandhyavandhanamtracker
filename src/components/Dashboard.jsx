@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useActivities } from '../hooks/useActivities'
 import { useStats } from '../hooks/useStats'
 import { SLOTS } from '../utils/slots'
-import { cancelSlotReminder, scheduleAllReminders } from '../utils/notifications'
+import { scheduleAllReminders, skipSlotReminderToday } from '../utils/notifications'
 
 const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -198,7 +198,7 @@ export default function Dashboard() {
                     return
                   }
                   await logAction(slot.key, 'done')
-                  await cancelSlotReminder(slot.key)
+                  if (isToday) await skipSlotReminderToday(slot.key)
                 }}
               >
                 {done ? '↩ Mark Undone' : '✓ Mark as Done'}
@@ -219,7 +219,7 @@ export default function Dashboard() {
               <button className="flex-1 py-2.5 border border-warm rounded-[10px] font-syne font-semibold text-sm cursor-pointer hover:bg-cream transition-colors" onClick={() => setConfirmUndone(null)}>Cancel</button>
               <button className="flex-1 py-2.5 bg-red-600 text-white border-none rounded-[10px] font-syne font-bold text-sm cursor-pointer hover:bg-red-700 transition-colors" onClick={async () => {
                 await logAction(confirmUndone, 'undone')
-                await scheduleAllReminders()
+                if (isToday) await scheduleAllReminders()
                 setConfirmUndone(null)
               }}>Yes, Undo</button>
             </div>
