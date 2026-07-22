@@ -130,11 +130,11 @@ export default function CommunityPage() {
                 {isMySon && <span className="bg-blue-500 text-white px-2 py-0.5 rounded-full text-[0.52rem] font-bold font-syne uppercase tracking-wider ml-1">Son</span>}
                 {entry.parent_name && <div className="text-[0.65rem] text-gray-400 font-normal">{entry.parent_name}&apos;s son</div>}
               </div>
-              <div className="font-syne font-extrabold text-sm text-center">{entry.days}</div>
+              <div className="font-syne font-bold text-sm text-saffron-600 text-center">{entry.days}</div>
               <div className="font-syne text-sm text-center font-bold text-[#f59e0b]">{entry.prathah}<span className="text-[0.65rem] text-[#f59e0b]/50">/{entry.days}</span></div>
               <div className="font-syne text-sm text-center font-bold text-[#3b82f6]">{entry.madhyahnika}<span className="text-[0.65rem] text-[#3b82f6]/50">/{entry.days}</span></div>
               <div className="font-syne text-sm text-center font-bold text-[#7c3aed]">{entry.saayam}<span className="text-[0.65rem] text-[#7c3aed]/50">/{entry.days}</span></div>
-              <div className="font-syne font-bold text-sm text-saffron-600 text-center">{entry.completion}%</div>
+              <div className="font-syne font-extrabold text-sm text-center">{entry.completion}%</div>
             </div>
           )
         })}
@@ -167,10 +167,10 @@ export default function CommunityPage() {
                   </div>
                   {entry.parent_name && <div className="text-[0.6rem] text-gray-400 truncate">{entry.parent_name}&apos;s son</div>}
                 </div>
-                <div className="font-syne font-bold text-xs text-saffron-600 text-center min-w-[40px]">{entry.completion}%</div>
+                <div className="font-syne font-bold text-xs text-saffron-600 text-center min-w-[40px]">{entry.days}d</div>
               </div>
               <div className="flex gap-3 text-[0.65rem] font-bold">
-                <span className="text-gray-500">{entry.days}d</span>
+                <span className="text-gray-500">{entry.completion}%</span>
                 <span className="text-[#f59e0b]">P {entry.prathah}/{entry.days}</span>
                 <span className="text-[#3b82f6]">M {entry.madhyahnika}/{entry.days}</span>
                 <span className="text-[#7c3aed]">S {entry.saayam}/{entry.days}</span>
