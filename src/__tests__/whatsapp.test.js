@@ -8,10 +8,9 @@ import { buildShareText, whatsappShareUrl } from '../utils/whatsapp'
 import { SLOTS } from '../utils/slots'
 
 describe('whatsapp share', () => {
-  it('builds share text with ritual name and date', () => {
-    const text = buildShareText(SLOTS[0], 'Thursday, October 22')
-    expect(text).toContain('Pratah Sandhyavandhanam')
-    expect(text).toContain('Thursday, October 22')
+  it('builds share text with person, ritual name and date', () => {
+    expect(buildShareText('Aditya', SLOTS[0], 'Thursday, October 22'))
+      .toBe('Aditya - Pratah Sandhyavandhanam done on Thursday, October 22. 🙏🏻')
   })
 
   it('encodes text into a wa.me url', () => {

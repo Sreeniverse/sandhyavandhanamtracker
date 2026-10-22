@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 
-export function buildShareText(slot, dateDisplay) {
-  return `${slot.fullLabel} done on ${dateDisplay}. 🙏🏻`
+export function buildShareText(name, slot, dateDisplay) {
+  return `${name} - ${slot.fullLabel} done on ${dateDisplay}. 🙏🏻`
 }
 
 export function whatsappShareUrl(text) {

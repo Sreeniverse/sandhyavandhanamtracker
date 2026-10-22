@@ -111,7 +111,7 @@ function ConsistencyRings({ stats }) {
 }
 
 export default function Dashboard() {
-  const { selectedProfile } = useAuth()
+  const { user, selectedProfile } = useAuth()
   const { today, history, loading, error, logAction, selectedDate, navigateDate, goToToday, isToday, isPastDate, canGoBack, canGoForward } = useActivities()
   const stats = useStats(history)
   const [confirmUndone, setConfirmUndone] = useState(null)
@@ -207,7 +207,7 @@ export default function Dashboard() {
               {done && (
                 <button
                   className="w-full py-3 mt-2 rounded-[10px] font-syne text-xs md:text-sm font-bold cursor-pointer tracking-wide border-1.5 border-[#25D366] bg-[#25D366] text-white hover:bg-[#1ebe5a] transition-all"
-                  onClick={() => shareToWhatsApp(buildShareText(slot, dateDisplay))}
+                  onClick={() => shareToWhatsApp(buildShareText((selectedProfile || user).name, slot, dateDisplay))}
                 >
                   Share on WhatsApp
                 </button>
