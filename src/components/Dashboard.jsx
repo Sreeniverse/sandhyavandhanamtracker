@@ -4,6 +4,7 @@ import { useActivities } from '../hooks/useActivities'
 import { useStats } from '../hooks/useStats'
 import { SLOTS } from '../utils/slots'
 import { scheduleAllReminders, skipSlotReminderToday } from '../utils/notifications'
+import { buildShareText, shareToWhatsApp } from '../utils/whatsapp'
 
 const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -203,6 +204,14 @@ export default function Dashboard() {
               >
                 {done ? '↩ Mark Undone' : '✓ Mark as Done'}
               </button>
+              {done && (
+                <button
+                  className="w-full py-3 mt-2 rounded-[10px] font-syne text-xs md:text-sm font-bold cursor-pointer tracking-wide border-1.5 border-[#25D366] bg-[#25D366] text-white hover:bg-[#1ebe5a] transition-all"
+                  onClick={() => shareToWhatsApp(buildShareText(slot, dateDisplay))}
+                >
+                  Share on WhatsApp
+                </button>
+              )}
             </div>
           )
         })}
